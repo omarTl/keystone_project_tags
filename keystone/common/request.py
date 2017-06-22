@@ -117,6 +117,9 @@ class Request(webob.Request):
         if self.context.domain_id:
             initiator.domain_id = self.context.domain_id
 
+        if self.context.project_tag_id:
+            initiator.project_tag_id = self.context.project_tag_id
+
         return initiator
 
     auth_type = environ_getter('AUTH_TYPE', None)
