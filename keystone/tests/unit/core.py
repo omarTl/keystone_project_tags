@@ -296,6 +296,18 @@ def new_project_ref(domain_id=None, is_domain=False, **kwargs):
     return ref
 
 
+def new_project_tag_ref(project_id=None, **kwargs):
+    if project_id is None:
+        project_id = uuid.uuid4().hex
+    ref = {
+        'id': uuid.uuid4().hex,
+        'name': uuid.uuid4().hex,
+        'project_id': project_id
+    }
+    ref.update(kwargs)
+    return ref
+
+
 def new_user_ref(domain_id, project_id=None, **kwargs):
     ref = {
         'id': uuid.uuid4().hex,

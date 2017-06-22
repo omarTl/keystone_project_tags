@@ -37,6 +37,7 @@ def get_project_from_domain(domain_ref):
 # None. See comment in Project class of resource/backends/sql.py for more
 # details.
 NULL_DOMAIN_ID = '<<keystone.domain.root>>'
+NULL_PROJECT_ID = '<<keystone.project.root>>'
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -258,6 +259,88 @@ class ResourceDriverBase(object):
                       implement if at all possible.
 
         :returns: a list of project_refs or an empty list.
+
+        """
+        raise exception.NotImplemented()  # pragma: no cover
+
+    @abc.abstractmethod
+    def get_project_tag(self, project_id, tag_name):
+        """Get project tag for project.
+
+        :returns: project_tag_ref
+        :raises keystone.exception.ProjectTagNotFound: if project_tag_id
+                                                       does not exist
+
+        """
+        raise exception.NotImplemented()  # pragma: no cover
+
+    @abc.abstractmethod
+    def get_all_project_tags_with_name(self, tag_name):
+        """Get project tags by name.
+
+        :returns: project_tag_ref
+        :raises keystone.exception.ProjectTagNotFound: if project_tag_id
+                                                       does not exist
+
+        """
+        raise exception.NotImplemented()  # pragma: no cover
+
+    @abc.abstractmethod
+    def create_project_tag(self, project_tag):
+        """Create the specified tag and adds it to the list in the project.
+
+        :param project_tag_id:
+        :param dict project_tag: The new project tag
+
+        Project tags schema::
+
+            type: object
+            properties:
+                id:
+                    type: integer
+                name:
+                    type: string
+                project_id:
+                    type: [string, null]
+            required: [id, name, project_id]
+            additionalProperties: false
+
+        :raises keystone.exception.ProjectNotFound: if project_id does not
+                                                    exist
+        :raises keystone.exception.Conflict: if tag with the same id already
+                                             exist or same tag name under the
+                                             same project
+
+        """
+        raise exception.NotImplemented()  # pragma: no cover
+
+    @abc.abstractmethod
+    def list_project_tags(self, project_id):
+        """List project tags for the provided project id.
+
+        :param project_id:
+
+        :returns: a dictionary of project tag names.
+        :raises keystone.exception.ProjectNotFound: if project_id does not
+                                                    exist
+
+        """
+        raise exception.NotImplemented()  # pragma: no cover
+
+    @abc.abstractmethod
+    def delete_project_tag(self, project_id, tag_name):
+        """Delete project tag with provided tag id.
+
+        :param project_tag_id:
+
+        """
+        raise exception.NotImplemented()  # pragma: no cover
+
+    @abc.abstractmethod
+    def remove_all_project_tags(self, project_id):
+        """Remove the entire tag list from the given project.
+
+        :param project_id:
 
         """
         raise exception.NotImplemented()  # pragma: no cover
