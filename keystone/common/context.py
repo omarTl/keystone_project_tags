@@ -29,12 +29,14 @@ class RequestContext(oslo_context.RequestContext):
         self.domain_id = kwargs.pop('domain_id ', None)
         self.user_domain_id = kwargs.pop('user_domain_id ', None)
         self.project_domain_id = kwargs.pop('project_domain_id ', None)
+        self.project_tag_id = kwargs.pop('project_tag_id', None)
 
         self.project_name = kwargs.pop('project_name', None)
         self.domain_name = kwargs.pop('domain_name', None)
         self.username = kwargs.pop('username', None)
         self.user_domain_name = kwargs.pop('user_domain_name', None)
         self.project_domain_name = kwargs.pop('project_domain_name', None)
+        self.project_tag_name = kwargs.pop('project_tag_name', None)
 
         self.is_delegated_auth = kwargs.pop('is_delegated_auth', False)
 

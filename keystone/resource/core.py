@@ -14,6 +14,7 @@
 
 from oslo_log import log
 import six
+from six.moves import urllib
 
 from keystone import assignment
 from keystone.common import cache
@@ -32,6 +33,7 @@ from keystone.token import provider as token_provider
 CONF = keystone.conf.CONF
 LOG = log.getLogger(__name__)
 MEMOIZE = cache.get_memoization_decorator(group='resource')
+MAX_PROJECT_TAG_COUNT = 50
 
 
 @dependency.provider('resource_api')
@@ -49,10 +51,18 @@ class Manager(manager.Manager):
 
     _DOMAIN = 'domain'
     _PROJECT = 'project'
+    _PROJECT_TAG = 'project tag'
 
     def __init__(self):
         resource_driver = CONF.resource.driver
         super(Manager, self).__init__(resource_driver)
+
+    def _check_limit(self, project_id):
+        current_tags = self.driver.list_project_tags(project_id)
+        if len(current_tags) >= MAX_PROJECT_TAG_COUNT:
+            raise exception.ValidationError(
+                attribute="fewer than %d tags" % MAX_PROJECT_TAG_COUNT,
+                target="project " + project_id)
 
     def _get_hierarchy_depth(self, parents_list):
         return len(parents_list) + 1
@@ -487,6 +497,8 @@ class Manager(manager.Manager):
             project_list = subtree_list + [project]
             projects_ids = [x['id'] for x in project_list]
 
+            self.remove_all_project_tags(project_id)
+
             for prj in project_list:
                 self._pre_delete_cleanup_project(prj['id'])
             ret = self.driver.delete_projects_from_ids(projects_ids)
@@ -872,6 +884,93 @@ class Manager(manager.Manager):
             if new_ref['domain_id'] != orig_ref['domain_id']:
                 raise exception.ValidationError(_('Cannot change Domain ID'))
 
+    def _check_project_exists(self, project_id):
+        try:
+            self.driver.get_project(project_id)
+        except exception.ProjectNotFound:
+            raise exception.ProjectNotFound(project_id=project_id)
+
+    def list_projects_with_tags(self, tag_names):
+        """Filter projects that contain all provided tags."""
+        project_ids = self.driver.list_projects_with_tags(
+            tag_names.split(','))
+        return self.driver.list_projects_from_ids(project_ids)
+
+    def list_projects_with_tags_any(self, tag_names):
+        """Filter projects that contain at least one provided tags."""
+        project_ids = self.driver.list_projects_with_tags_any(
+            tag_names.split(','))
+        return self.driver.list_projects_from_ids(project_ids)
+
+    def list_projects_not_tags(self, tag_names):
+        """Filter projects that do not contain provided tags."""
+        project_ids = self.driver.list_projects_not_tags(
+            tag_names.split(','))
+        return self.driver.list_projects_from_ids(project_ids)
+
+    def list_projects_not_tags_any(self, tag_names):
+        """Filter projects that do not contain at least one provided tags."""
+        project_ids = self.driver.list_projects_not_tags_any(
+            tag_names.split(','))
+        return self.driver.list_projects_from_ids(project_ids)
+
+    def create_project_tag(self, project_id, value, initiator=None):
+        """Create a new tag on project."""
+        self._check_project_exists(project_id)
+        self._check_limit(project_id)
+        project_tag = {}
+        project_tag['project_id'] = project_id
+        project_tag['name'] = value.strip()
+        try:
+            ref = self.driver.create_project_tag(project_tag)
+        except exception.Conflict:
+            raise exception.Conflict(
+                type='project tag',
+                details='Tag already exists')
+        notifications.Audit.created(
+            self._PROJECT_TAG, project_tag['name'], initiator)
+        ref.pop('id', None)
+        return ref
+
+    def check_if_project_contains_tag(self, project_id, project_tag_name):
+        """Return information for a single tag on a project."""
+        self._check_project_exists(project_id)
+        return self.driver.get_project_tag(project_id,
+                                           project_tag_name)
+
+    def list_project_tags(self, project_id):
+        """List all tags on project."""
+        self._check_project_exists(project_id)
+        resp = {}
+        resp['tags'] = self.driver.list_project_tags(project_id)
+        return resp
+
+    def delete_project_tag(self, project_id, project_tag_name):
+        """Delete single tag from project."""
+        try:
+            self.driver.get_project_tag(project_id, project_tag_name)
+        except exception.ProjectTagNotFound:
+            raise exception.ProjectTagNotFound(project_tag_id=project_tag_name)
+        notifications.Audit.deleted(
+            self._PROJECT_TAG, project_tag_name)
+        return self.driver.delete_project_tag(project_id, project_tag_name)
+
+    def remove_all_project_tags(self, project_id):
+        """Delete all project tags from project."""
+        self._check_project_exists(project_id)
+        action = self.driver.remove_all_project_tags(project_id)
+        notifications.Audit.deleted(
+            self._PROJECT_TAG, project_id)
+        return action
+
+    def update_project_tags(self, project_id, tags, initiator=None):
+        """Update project tags calls a combination of other core functions."""
+        self._check_project_exists(project_id)
+        self.remove_all_project_tags(project_id)
+        for tag_name in tags:
+            tag_name = urllib.parse.unquote(tag_name)
+            self.create_project_tag(project_id, tag_name, initiator)
+        return self.list_project_tags(project_id)
 
 MEMOIZE_CONFIG = cache.get_memoization_decorator(group='domain_config')
 

@@ -223,6 +223,14 @@ class SqlModels(SqlTests):
                 ('audit_chain_id', sql.String, 32))
         self.assertExpectedSchema('revocation_event', cols)
 
+    # TODO(aselius): Add the model tests, and other project tag related
+    # tests below.
+    def test_project_tags_model(self):
+        cols = (('id', sql.Integer, None),
+                ('project_id', sql.String, 64),
+                ('name', sql.String, 60))
+        self.assertExpectedSchema('project_tag', cols)
+
 
 class SqlIdentity(SqlTests,
                   identity_tests.IdentityTests,
@@ -306,6 +314,8 @@ class SqlIdentity(SqlTests,
         ref['id'] = uuid.uuid4().hex
         ref['name'] = ref['name'].upper()
         self.resource_api.create_project(ref['id'], ref)
+
+    # TODO(aselius): Add project tags specific tests here
 
     def test_delete_project_with_user_association(self):
         user = unit.new_user_ref(domain_id=CONF.identity.default_domain_id)
