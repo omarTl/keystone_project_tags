@@ -712,6 +712,71 @@ class ResourceTestCase(test_v3.RestfulTestCase,
 
         return projects
 
+    def _create_project_and_tags(self, tag_size=1):
+        """Create a project and a number of tags attached to that project.
+
+        :param tag_size: the desired number of tags created with a specified
+                         project.
+
+        :returns project: the project that was created.
+        :returns tags: a list of project tag names that were attached to
+                       the project.
+        """
+        tags = [uuid.uuid4().hex for i in range(tag_size)]
+        ref = unit.new_project_ref(
+            domain_id=self.domain_id,
+            tags=tags)
+        resp = self.post('/projects', body={'project': ref})
+        return resp.result['project'], tags
+
+    def test_list_projects_filtering_by_tags(self):
+        """Call ``GET /projects?tags={tags}``."""
+        project, tags = self._create_project_and_tags(tag_size=2)
+        tag_string = ','.join(tags)
+        resp = self.get('/projects?tags=%(values)s' % {
+            'values': tag_string})
+        self.assertValidProjectListResponse(resp)
+        self.assertEqual(project['id'], resp.result['projects'][0]['id'])
+
+    def test_list_projects_filtering_by_tags_any(self):
+        """Call ``GET /projects?tags-any={tags}``."""
+        project, tags = self._create_project_and_tags(tag_size=2)
+        resp = self.get('/projects?tags-any=%(values)s' % {
+            'values': tags[0]})
+        self.assertValidProjectListResponse(resp)
+        self.assertEqual(project['id'], resp.result['projects'][0]['id'])
+
+    def test_list_projects_filtering_by_not_tags(self):
+        """Call ``GET /projects?not-tags={tags}``."""
+        project1, tags1 = self._create_project_and_tags(tag_size=2)
+        project2, tags2 = self._create_project_and_tags(tag_size=2)
+        tag_string = ','.join(tags1)
+        resp = self.get('/projects?not-tags=%(values)s' % {
+            'values': tag_string})
+        self.assertValidProjectListResponse(resp)
+        project_ids = []
+        for project in resp.result['projects']:
+            project_ids.append(project['id'])
+        self.assertNotIn(project1['id'], project_ids)
+        self.assertIn(project2['id'], project_ids)
+
+    def test_list_projects_filtering_by_not_tags_any(self):
+        """Call ``GET /projects?not-tags-any={tags}``."""
+        """Call ``GET /projects?not-tags-any={tags}``."""
+        project1, tags1 = self._create_project_and_tags(tag_size=2)
+        project2, tags2 = self._create_project_and_tags(tag_size=2)
+        project3, tags3 = self._create_project_and_tags(tag_size=2)
+        tag_string = tags1[0] + ',' + tags2[0]
+        resp = self.get('/projects?not-tags-any=%(values)s' % {
+            'values': tag_string})
+        self.assertValidProjectListResponse(resp)
+        project_ids = []
+        for project in resp.result['projects']:
+            project_ids.append(project['id'])
+        self.assertNotIn(project1['id'], project_ids)
+        self.assertNotIn(project2['id'], project_ids)
+        self.assertIn(project3['id'], project_ids)
+
     def test_list_projects_filtering_by_parent_id(self):
         """Call ``GET /projects?parent_id={project_id}``."""
         projects = self._create_projects_hierarchy(hierarchy_size=2)
@@ -1312,6 +1377,217 @@ class ResourceTestCase(test_v3.RestfulTestCase,
                 'project_id': projects[0]['project']['id']},
             expected_status=http_client.FORBIDDEN)
 
+    def test_create_project_with_tags(self):
+        project, tags = self._create_project_and_tags(tag_size=10)
+        ref = self.get(
+            '/projects/%(project_id)s' % {
+                'project_id': project['id']},
+            expected_status=http_client.OK)
+        self.assertIn('tags', ref.result['project'])
+        for tag in tags:
+            self.assertIn(tag, ref.result['project']['tags'])
+
+    def test_update_project_with_tags(self):
+        project, tags = self._create_project_and_tags(tag_size=9)
+        tag = uuid.uuid4().hex
+        project['tags'].append(tag)
+        project.pop('id', None)
+        ref = self.patch(
+            '/projects/%(project_id)s' % {
+                'project_id': self.project_id},
+            body={'project': {'tags': project['tags']}})
+        self.assertIn(tag, ref.result['project']['tags'])
+
+    def test_create_project_tag(self):
+        self.put(
+            '/projects/%(project_id)s/tags/%(value)s' % {
+                'project_id': self.project_id,
+                'value': uuid.uuid4().hex},
+            expected_status=http_client.NO_CONTENT)
+
+    def test_create_project_tag_case_sensitivity(self):
+        case_tags = ['case', 'CASE']
+        for tag in case_tags:
+            self.put(
+                '/projects/%(project_id)s/tags/%(value)s' % {
+                    'project_id': self.project_id,
+                    'value': tag},
+                expected_status=http_client.NO_CONTENT)
+
+    def test_get_single_project_tag(self):
+        project, tags = self._create_project_and_tags(tag_size=1)
+        self.get(
+            '/projects/%(project_id)s/tags/%(value)s' % {
+                'project_id': project['id'],
+                'value': tags[0]},
+            expected_status=http_client.NO_CONTENT)
+
+    def test_get_project_tag_that_does_not_exist(self):
+        project, _ = self._create_project_and_tags(tag_size=1)
+        self.get(
+            '/projects/%(project_id)s/tags/%(value)s' % {
+                'project_id': project['id'],
+                'value': uuid.uuid4().hex},
+            expected_status=http_client.NOT_FOUND)
+
+    def test_delete_project_tag(self):
+        project, tags = self._create_project_and_tags(tag_size=1)
+        self.delete(
+            '/projects/%(project_id)s/tags/%(value)s' % {
+                'project_id': project['id'],
+                'value': tags[0]},
+            expected_status=http_client.NO_CONTENT)
+        self.get(
+            '/projects/%(project_id)s/tags/%(value)s' % {
+                'project_id': self.project_id,
+                'value': tags[0]},
+            expected_status=http_client.NOT_FOUND)
+
+    def test_delete_project_tags(self):
+        project, tags = self._create_project_and_tags(tag_size=5)
+        self.delete(
+            '/projects/%(project_id)s/tags/' % {
+                'project_id': project['id']},
+            expected_status=http_client.NO_CONTENT)
+        self.get(
+            '/projects/%(project_id)s/tags/%(value)s' % {
+                'project_id': self.project_id,
+                'value': tags[0]},
+            expected_status=http_client.NOT_FOUND)
+        resp = self.get(
+            '/projects/%(project_id)s/tags/' % {
+                'project_id': self.project_id},
+            expected_status=http_client.OK)
+        self.assertEqual(len(resp.result['tags']), 0)
+
+    def test_create_project_tag_invalid_project_id(self):
+        self.put(
+            '/projects/%(project_id)s/tags/%(value)s' % {
+                'project_id': uuid.uuid4().hex,
+                'value': uuid.uuid4().hex},
+            expected_status=http_client.NOT_FOUND)
+
+    def test_create_project_tag_unsafe_name(self):
+        tag = uuid.uuid4().hex + ','
+        self.put(
+            '/projects/%(project_id)s/tags/%(value)s' % {
+                'project_id': self.project_id,
+                'value': tag},
+            expected_status=http_client.BAD_REQUEST)
+
+    def test_create_project_tag_already_exists(self):
+        project, tags = self._create_project_and_tags(tag_size=1)
+        self.put(
+            '/projects/%(project_id)s/tags/%(value)s' % {
+                'project_id': project['id'],
+                'value': tags[0]},
+            expected_status=http_client.NO_CONTENT)
+
+    def test_create_project_tag_over_tag_limit(self):
+        project, tags = self._create_project_and_tags(tag_size=50)
+        self.put(
+            '/projects/%(project_id)s/tags/%(value)s' % {
+                'project_id': project['id'],
+                'value': uuid.uuid4().hex},
+            expected_status=http_client.BAD_REQUEST)
+
+    def test_create_project_tag_name_over_character_limit(self):
+        tag = 'a' * 61
+        self.put(
+            '/projects/%(project_id)s/tags/%(value)s' % {
+                'project_id': self.project_id,
+                'value': tag},
+            expected_status=http_client.BAD_REQUEST)
+
+    def test_delete_tag_invalid_project_id(self):
+        self.delete(
+            '/projects/%(project_id)s/tags/%(value)s' % {
+                'project_id': uuid.uuid4().hex,
+                'value': uuid.uuid4().hex},
+            expected_status=http_client.NOT_FOUND)
+
+    def test_delete_project_tag_not_found(self):
+        self.delete(
+            '/projects/%(project_id)s/tags/%(value)s' % {
+                'project_id': self.project_id,
+                'value': uuid.uuid4().hex},
+            expected_status=http_client.NOT_FOUND)
+
+    def test_list_project_tags(self):
+        project, tags = self._create_project_and_tags(tag_size=5)
+        resp = self.get(
+            '/projects/%(project_id)s/tags' % {
+                'project_id': project['id']},
+            expected_status=http_client.OK)
+        self.assertIn(tags[0], resp.result['tags'])
+
+    def test_check_if_project_tag_exists(self):
+        project, tags = self._create_project_and_tags(tag_size=5)
+        self.head(
+            '/projects/%(project_id)s/tags/%(value)s' % {
+                'project_id': project['id'],
+                'value': tags[0]},
+            expected_status=http_client.NO_CONTENT)
+
+    def test_list_project_tags_for_project_with_no_tags(self):
+        resp = self.get(
+            '/projects/%(project_id)s/tags' % {
+                'project_id': self.project_id},
+            expected_status=http_client.OK)
+        self.assertEqual([], resp.result['tags'])
+
+    def test_check_project_with_no_tags(self):
+        self.head(
+            '/projects/%(project_id)s/tags/%(value)s' % {
+                'project_id': self.project_id,
+                'value': uuid.uuid4().hex},
+            expected_status=http_client.NOT_FOUND)
+
+    def test_update_project_tags(self):
+        project, tags = self._create_project_and_tags(tag_size=5)
+        resp = self.put(
+            '/projects/%(project_id)s/tags' % {
+                'project_id': project['id']},
+            body={'tags': tags},
+            expected_status=http_client.OK)
+        self.assertIn(tags[1], resp.result['tags'])
+
+    def test_update_project_tags_removes_previous_tags(self):
+        tag = uuid.uuid4().hex
+        project, tags = self._create_project_and_tags(tag_size=5)
+        self.put(
+            '/projects/%(project_id)s/tags/%(value)s' % {
+                'project_id': project['id'],
+                'value': tag},
+            expected_status=http_client.NO_CONTENT)
+        resp = self.put(
+            '/projects/%(project_id)s/tags' % {
+                'project_id': project['id']},
+            body={'tags': tags},
+            expected_status=http_client.OK)
+        self.assertNotIn(tag, resp.result['tags'])
+        self.assertIn(tags[1], resp.result['tags'])
+
+    def test_update_project_tags_unsafe_names(self):
+        project, tags = self._create_project_and_tags(tag_size=5)
+        invalid_chars = [',', '/']
+        for char in invalid_chars:
+            tags[0] = uuid.uuid4().hex + char
+            self.put(
+                '/projects/%(project_id)s/tags' % {
+                    'project_id': project['id']},
+                body={'tags': tags},
+                expected_status=http_client.BAD_REQUEST)
+
+    def test_update_project_tags_with_too_many_tags(self):
+        project, _ = self._create_project_and_tags(tag_size=1)
+        tags = [uuid.uuid4().hex for i in range(51)]
+        tags.append(uuid.uuid4().hex)
+        self.put(
+            '/projects/%(project_id)s/tags' % {'project_id': project['id']},
+            body={'tags': tags},
+            expected_status=http_client.BAD_REQUEST)
+
 
 class ResourceV3toV2MethodsTestCase(unit.TestCase):
     """Test domain V3 to V2 conversion methods."""
@@ -1402,16 +1678,14 @@ class ResourceV3toV2MethodsTestCase(unit.TestCase):
 
     def test_v3_to_v2_project_method(self):
         self._setup_initial_projects()
-
+        project_list = [self.project1, self.project2, self.project3]
         # TODO(shaleh): these optional fields are not handled well by the
         # v3_to_v2 code. Manually remove them for now. Eventually update
         # new_project_ref to not return optional values
-        del self.project1['enabled']
-        del self.project1['description']
-        del self.project2['enabled']
-        del self.project2['description']
-        del self.project3['enabled']
-        del self.project3['description']
+        for p in project_list:
+            del p['enabled']
+            del p['description']
+            del p['tags']
 
         updated_project1 = controller.V2Controller.v3_to_v2_project(
             self.project1)
@@ -1436,6 +1710,7 @@ class ResourceV3toV2MethodsTestCase(unit.TestCase):
         for p in project_list:
             del p['enabled']
             del p['description']
+            del p['tags']
         updated_list = controller.V2Controller.v3_to_v2_project(project_list)
 
         self.assertEqual(len(updated_list), len(project_list))

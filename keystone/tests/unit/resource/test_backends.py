@@ -258,6 +258,7 @@ class ResourceTests(object):
         project_count = len(default_fixtures.TENANTS) + self.domain_count
         self.assertEqual(project_count, len(project_refs))
         for project in default_fixtures.TENANTS:
+            project['tags'] = []
             self.assertIn(project, project_refs)
 
     def test_list_projects_with_multiple_filters(self):
@@ -1537,6 +1538,152 @@ class ResourceTests(object):
         self.resource_api.delete_project(project['id'])
         user = self.identity_api.get_user(user['id'])
         self.assertNotIn('default_project_id', user)
+
+    def _create_project_and_tags(self, tag_size=1):
+        """Create a project and tags associated to that project.
+
+        :param tag_size: the desired number of tags attached to a project,
+                         default is 1 - one tag attached to one project.
+
+        :returns project: project dictionary created.
+        :returns tags: a list of the tags created.
+        """
+        tags = [uuid.uuid4().hex for i in range(tag_size)]
+        ref = unit.new_project_ref(
+            domain_id=CONF.identity.default_domain_id, tags=tags)
+        project = self.resource_api.create_project(ref['id'], ref)
+
+        return project, tags
+
+    def test_create_project_with_tags(self):
+        project, tags = self._create_project_and_tags(tag_size=5)
+        project_refs = self.resource_api.list_projects_with_tags_any(tags[0])
+        tag_ref = self.resource_api.get_project_tag(project['id'], tags[0])
+        self.assertEqual(tags[0], tag_ref)
+        self.assertEqual(project['id'], project_refs[0]['id'])
+
+    def test_list_projects_with_tags(self):
+        project, tags = self._create_project_and_tags(tag_size=2)
+        tag_filter = tags[0] + ',' + tags[1]
+        project_ref = self.resource_api.list_projects_with_tags(tag_filter)
+        self.assertEqual(project['id'], project_ref[0]['id'])
+
+    def test_list_projects_with_tags_any(self):
+        project, tags = self._create_project_and_tags(tag_size=2)
+        project_ref = self.resource_api.list_projects_with_tags_any(
+            tags[0])
+        project_ref_alt = self.resource_api.list_projects_with_tags_any(
+            tags[-1])
+        self.assertEqual(project['id'], project_ref[0]['id'])
+        self.assertEqual(project['id'], project_ref_alt[0]['id'])
+
+    def test_list_projects_not_tags(self):
+        project, tags = self._create_project_and_tags(tag_size=2)
+        tag_filter = tags[0] + ',' + tags[1]
+        project_ref = self.resource_api.list_projects_not_tags(tag_filter)
+        self.assertNotIn(project, project_ref)
+
+    def test_list_projects_not_tags_any(self):
+        project, tags = self._create_project_and_tags(tag_size=2)
+        project_ref = self.resource_api.list_projects_not_tags_any(
+            tags[0])
+        project_ref_alt = self.resource_api.list_projects_not_tags_any(
+            tags[-1])
+        self.assertNotIn(project, project_ref)
+        self.assertNotIn(project, project_ref_alt)
+
+    def test_get_project_contains_tags(self):
+        project, _ = self._create_project_and_tags(tag_size=1)
+        tag = uuid.uuid4().hex
+        self.resource_api.create_project_tag(project['id'], tag)
+        project['tags'].append(tag)
+        project_refs = self.resource_api.list_projects_with_tags_any(tag)
+        tag_ref = self.resource_api.get_project_tag(project['id'], tag)
+        self.assertEqual(tag, tag_ref)
+        self.assertEqual(project['id'], project_refs[0]['id'])
+
+    def test_list_project_tags(self):
+        # GET /v3/projects/{project_id}/tags
+        project, tags = self._create_project_and_tags(tag_size=1)
+        tag_ref = self.resource_api.list_project_tags(project['id'])
+        self.assertEqual(tags[0], tag_ref[0])
+
+    def test_list_project_tags_returns_not_found(self):
+        self.assertRaises(exception.ProjectNotFound,
+                          self.resource_api.list_project_tags,
+                          uuid.uuid4().hex)
+
+    def test_get_project_tag(self):
+        # GET /v3/projects/{project_id}/tags/{tag}
+        project, tags = self._create_project_and_tags(tag_size=1)
+        tag_ref = self.resource_api.get_project_tag(project['id'], tags[0])
+        self.assertEqual(tags[0], tag_ref)
+
+    def test_create_project_tag_with_trailing_whitespace(self):
+        # PUT /v3/projects/{project_id}/tags/{tag}
+        project, _ = self._create_project_and_tags(tag_size=1)
+        tag = uuid.uuid4().hex + '   '
+        tag_ref = self.resource_api.create_project_tag(project['id'], tag)
+        self.assertEqual(tag.strip(), tag_ref)
+
+    def test_create_project_tags_over_limit_conflict(self):
+        project, tags = self._create_project_and_tags(tag_size=50)
+        last_tag = 'tag51'
+        self.assertRaises(exception.ValidationError,
+                          self.resource_api.create_project_tag,
+                          project['id'], last_tag)
+
+    def test_create_project_tag_case_creates_different_tags(self):
+        project, _ = self._create_project_and_tags(tag_size=1)
+        new_tags = ['aaa', 'AAA']
+
+        ref = self.resource_api.update_project_tags(project['id'], new_tags)
+        for tag in new_tags:
+            self.assertIn(tag, ref)
+
+    def test_update_project_tags(self):
+        # PUT /v3/projects/{projecti_id}/tags
+        project, tags = self._create_project_and_tags(tag_size=2)
+        project_tag_ref = self.resource_api.list_project_tags(project['id'])
+        self.assertEqual(len(project_tag_ref), 2)
+
+        # Update project to only have one tag
+        tags = ['one']
+        self.resource_api.update_project_tags(project['id'], tags)
+        project_tag_ref = self.resource_api.list_project_tags(project['id'])
+        self.assertEqual(len(project_tag_ref), 1)
+
+    def test_update_project_tags_returns_not_found(self):
+        _, tags = self._create_project_and_tags(tag_size=2)
+        self.assertRaises(exception.ProjectNotFound,
+                          self.resource_api.update_project_tags,
+                          uuid.uuid4().hex,
+                          tags)
+
+    def test_delete_tag_from_project(self):
+        # DELETE /v3/projects/{project_id}/tags/{tag}
+        project, tags = self._create_project_and_tags(tag_size=2)
+        tag_to_delete = tags[-1]
+        self.resource_api.delete_project_tag(project['id'], tag_to_delete)
+        project_tag_ref = self.resource_api.list_project_tags(
+            project['id'])
+        self.assertEqual(len(project_tag_ref), 1)
+
+    def test_delete_project_tag_returns_not_found(self):
+        self.assertRaises(exception.ProjectNotFound,
+                          self.resource_api.delete_project_tag,
+                          uuid.uuid4().hex,
+                          uuid.uuid4().hex)
+
+    def test_delete_project_tags(self):
+        project, tags = self._create_project_and_tags(tag_size=5)
+        project_tag_ref = self.resource_api.list_project_tags(
+            project['id'])
+        self.assertEqual(len(project_tag_ref), 5)
+
+        self.resource_api.update_project_tags(project['id'], [])
+        project_tag_ref = self.resource_api.list_project_tags(project['id'])
+        self.assertEqual(project_tag_ref, [])
 
 
 class ResourceDriverTests(object):

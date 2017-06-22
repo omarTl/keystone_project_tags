@@ -266,6 +266,7 @@ class V2Controller(wsgi.Application):
         * v2.0 projects are not domain aware, and should have domain_id removed
         * v2.0 projects are not hierarchy aware, and should have parent_id
           removed
+        * v2.0 projects do not have tags
 
         This method should only be applied to project_refs being returned from
         the v2.0 controller(s).
@@ -278,6 +279,7 @@ class V2Controller(wsgi.Application):
             V2Controller.filter_domain_id(ref)
             V2Controller.filter_project_parent_id(ref)
             V2Controller.filter_is_domain(ref)
+            ref.pop('tags', None)
             return ref
 
         if isinstance(ref, dict):

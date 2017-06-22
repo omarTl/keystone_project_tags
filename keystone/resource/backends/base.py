@@ -261,3 +261,47 @@ class ResourceDriverBase(object):
 
         """
         raise exception.NotImplemented()  # pragma: no cover
+
+    @abc.abstractmethod
+    def list_projects_with_tags(self, tag_names):
+        """Filter for projects with all tags passed in.
+
+        :param tag_names:
+
+        :returns: a list of filtered project IDs
+
+        """
+        raise exception.NotImplemented()  # pragma: no cover
+
+    @abc.abstractmethod
+    def list_projects_with_tags_any(self, tag_names):
+        """Filter for projects with at least one of tags passed in.
+
+        :param tag_names:
+
+        :returns: a list of filtered project IDs
+
+        """
+        raise exception.NotImplemented()  # pragma: no cover
+
+    @abc.abstractmethod
+    def list_projects_not_tags(self, tag_names):
+        """Filter for projects with none of the tags passed in.
+
+        :param tag_names:
+
+        :returns: a list of filtered project IDs
+
+        """
+        raise exception.NotImplemented()  # pragma: no cover
+
+    @abc.abstractmethod
+    def list_projects_not_tags_any(self, tag_names):
+        """Filter for projects with out any one of the tags passed in.
+
+        :param tag_names:
+
+        :returns: a list of filtered project IDs
+
+        """
+        raise exception.NotImplemented()  # pragma: no cover

@@ -97,6 +97,7 @@ class TenantTestCase(unit.TestCase):
             tenant_copy.pop('domain_id')
             tenant_copy.pop('parent_id')
             tenant_copy.pop('is_domain')
+            tenant_copy.pop('tags', None)
             self.assertIn(tenant_copy, refs['tenants'])
 
     def _create_is_domain_project(self):
