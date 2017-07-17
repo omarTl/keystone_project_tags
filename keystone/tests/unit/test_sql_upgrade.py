@@ -2356,7 +2356,6 @@ class FullMigration(SqlMigrateBase, unit.TestCase):
                                 ['user_id', 'option_id', 'option_value'])
 
     def test_migration_024_add_created_expires_at_int_columns_password(self):
-
         self.expand(23)
         self.migrate(23)
         self.contract(23)
@@ -2420,6 +2419,64 @@ class FullMigration(SqlMigrateBase, unit.TestCase):
         meta = sqlalchemy.MetaData(self.engine)
         pw_table = sqlalchemy.Table('password', meta, autoload=True)
         self.assertFalse(pw_table.c.created_at_int.nullable)
+
+    def test_migration_025_expand_add_project_tags_table(self):
+        if self.engine.name == 'sqlite':
+            self.skipTest('sqlite backend does not support foreign keys')
+
+        self.expand(24)
+        self.migrate(24)
+        self.contract(24)
+
+        table_name = 'project_tag'
+        self.assertTableDoesNotExist(table_name)
+
+        self.expand(25)
+        self.migrate(25)
+        self.contract(25)
+
+        self.assertTableExists(table_name)
+        self.assertTableColumns(
+            table_name,
+            ['project_id', 'name'])
+
+        project_table = sqlalchemy.Table(
+            'project', self.metadata, autoload=True)
+        tag_table = sqlalchemy.Table(
+            'project_tag', self.metadata, autoload=True)
+
+        session = self.sessionmaker()
+        project_id = uuid.uuid4().hex
+
+        project = {
+            'id': project_id,
+            'name': uuid.uuid4().hex,
+            'enabled': True,
+            'domain_id': resource_base.NULL_DOMAIN_ID,
+            'is_domain': False
+        }
+
+        tag = {
+            'project_id': project_id,
+            'name': uuid.uuid4().hex
+        }
+
+        self.insert_dict(session, 'project', project)
+        self.insert_dict(session, 'project_tag', tag)
+
+        tags_query = session.query(tag_table).filter_by(
+            project_id=project_id).all()
+        self.assertThat(tags_query, matchers.HasLength(1))
+
+        session.execute(
+            project_table.delete().where(project_table.c.id == project_id)
+        )
+
+        tags_query = session.query(tag_table).filter_by(
+            project_id=project_id).all()
+        self.assertThat(tags_query, matchers.HasLength(0))
+
+        session.close()
 
 
 class MySQLOpportunisticFullMigration(FullMigration):
