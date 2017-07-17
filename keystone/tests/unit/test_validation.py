@@ -106,6 +106,9 @@ _INVALID_FILTERS = ['some string', 1, 0, True, False]
 
 _INVALID_NAMES = [True, 24, ' ', '']
 
+_MAX_PROJECT_TAG_COUNT = 50
+_MAX_PROJECT_TAG_NAME_CHARS = 60
+
 
 class EntityValidationTestCase(unit.BaseTestCase):
 
@@ -448,6 +451,90 @@ class ProjectValidationTestCase(unit.BaseTestCase):
             self.assertRaises(exception.SchemaValidationError,
                               self.create_project_validator.validate,
                               request_to_validate)
+
+
+class ProjectTagsValidationTestCase(unit.BaseTestCase):
+    """Test for V3 Project Tags API validation."""
+
+    def setUp(self):
+        super(ProjectTagsValidationTestCase, self).setUp()
+
+        create = resource_schema.project_tag_create
+        update = resource_schema.project_tag_update
+        self.create_project_tags_validator = validators.SchemaValidator(create)
+        self.update_project_tags_validator = validators.SchemaValidator(update)
+
+    def test_validate_create_project_tags_request(self):
+        tag = 'valid'
+        self.create_project_tags_validator.validate(tag)
+
+    def test_validate_create_project_tags_empty_tag(self):
+        tag = ''
+        self.assertRaises(exception.SchemaValidationError,
+                          self.create_project_tags_validator.validate,
+                          tag)
+
+    def test_validate_create_project_tags_invalid_characters(self):
+        tag = 'invalid,'
+        self.assertRaises(exception.SchemaValidationError,
+                          self.create_project_tags_validator.validate,
+                          tag)
+
+        tag = 'invalid/'
+        self.assertRaises(exception.SchemaValidationError,
+                          self.create_project_tags_validator.validate,
+                          tag)
+
+    def test_validate_create_project_tags_name_too_large(self):
+        tag = 'a' * _MAX_PROJECT_TAG_NAME_CHARS
+        self.create_project_tags_validator.validate(tag)
+
+        # Should fail for > max value, which is 60 in this case
+        tag += 'a'
+        self.assertRaises(exception.SchemaValidationError,
+                          self.create_project_tags_validator.validate,
+                          tag)
+
+    def test_validate_update_project_tags_request(self):
+        tags = ['valid']
+        self.update_project_tags_validator.validate(tags)
+
+    def test_validate_update_project_tags_empty_list(self):
+        tags = []
+        self.update_project_tags_validator.validate(tags)
+
+    def test_validate_update_project_tags_invalid_characters(self):
+        tags = ['Valid', 'Invalid,']
+        self.assertRaises(exception.SchemaValidationError,
+                          self.create_project_tags_validator.validate,
+                          tags)
+
+        tags = ['Valid', 'Invalid/']
+        self.assertRaises(exception.SchemaValidationError,
+                          self.create_project_tags_validator.validate,
+                          tags)
+
+    def test_validate_update_project_tags_name_too_large(self):
+        tag = 'a' * _MAX_PROJECT_TAG_NAME_CHARS
+        tags = [tag]
+        self.update_project_tags_validator.validate(tags)
+
+        # Should fail too many characters, which is 60
+        tag += 'a'
+        tags = [tag]
+        self.assertRaises(exception.SchemaValidationError,
+                          self.create_project_tags_validator.validate,
+                          tags)
+
+    def test_validate_update_project_tags_max_values(self):
+        tags = ['tag%d' % i for i in range(_MAX_PROJECT_TAG_COUNT)]
+        self.update_project_tags_validator.validate(tags)
+
+        # Should fail for higher than max value, which is 50
+        tags.append('tag51')
+        self.assertRaises(exception.SchemaValidationError,
+                          self.create_project_tags_validator.validate,
+                          tags)
 
 
 class DomainValidationTestCase(unit.BaseTestCase):
