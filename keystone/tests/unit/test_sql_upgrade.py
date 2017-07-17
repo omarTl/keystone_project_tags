@@ -2362,7 +2362,6 @@ class FullMigration(SqlMigrateBase, unit.TestCase):
     def test_migration_024_expand_add_project_tags_table(self):
         if self.engine.name == 'sqlite':
             self.skipTest('sqlite backend does not support foreign keys')
-
         self.expand(23)
         self.migrate(23)
         self.contract(23)
