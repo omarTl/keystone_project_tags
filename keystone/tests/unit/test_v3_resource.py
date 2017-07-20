@@ -741,7 +741,7 @@ class ResourceTestCase(test_v3.RestfulTestCase,
         # Create a list of tags and a project
         tag_names = []
         for tag in tags:
-            tag_names.append(tag['name'])
+            tag_names.append(tag)
         # Extract out the tag names from list of tag objects
         tag_string = ','.join(tag_names)
         # self.get with query and valid projectlistresponse
@@ -759,7 +759,7 @@ class ResourceTestCase(test_v3.RestfulTestCase,
         # Create a list of tags and a project
         tag_names = []
         for tag in tags:
-            tag_names.append(tag['name'])
+            tag_names.append(tag)
         # Extract out the tag names from list of tag objects
 
         # self.get with query and valid projectlistresponse
@@ -779,7 +779,7 @@ class ResourceTestCase(test_v3.RestfulTestCase,
         # Create a list of tags and a project
         tag_names = []
         for tag in tags:
-            tag_names.append(tag['name'])
+            tag_names.append(tag)
         # Extract out the tag names from list of tag objects
         tag_string = ','.join(tag_names)
 
@@ -798,7 +798,7 @@ class ResourceTestCase(test_v3.RestfulTestCase,
         # Create a list of tags and a project
         tag_names = []
         for tag in tags:
-            tag_names.append(tag['name'])
+            tag_names.append(tag)
         # Extract out the tag names from list of tag objects
 
         # self.get with query and valid projectlistresponse
@@ -1446,7 +1446,7 @@ class ResourceTestCase(test_v3.RestfulTestCase,
                 'value': tag_ref['name']},
             expected_status=http_client.OK)
 
-    def test_project_contains_tag(self):
+    def test_get_project_tag(self):
         """Call ``GET /projects/{project_id}/tags``."""
         tag_ref = unit.new_project_tag_ref(project_id=self.project_id)
         # Create tag to find
@@ -1461,7 +1461,7 @@ class ResourceTestCase(test_v3.RestfulTestCase,
                 'value': tag_ref['name']},
             expected_status=http_client.NO_CONTENT)
 
-    def test_project_contains_tag_that_doesnt_exist(self):
+    def test_get_project_tag_that_doesnt_exist(self):
         """Call ``GET /projects/{project_id}/tags``."""
         r = self.get(
             '/projects/%(project_id)s/tags/%(value)s' % {
@@ -1535,7 +1535,7 @@ class ResourceTestCase(test_v3.RestfulTestCase,
                 'value': tag_ref['name']},
             expected_status=http_client.CONFLICT)
 
-    def test_create_project_tag_over_limit(self):
+    def test_create_project_tag_over_tag_limit(self):
         tags = []
         max_tags = 50
         for x in range(0, max_tags):
@@ -1555,7 +1555,7 @@ class ResourceTestCase(test_v3.RestfulTestCase,
                 'value': tag_ref['name']},
             expected_status=http_client.BAD_REQUEST)
 
-    def test_create_project_tag_greater_than_limit(self):
+    def test_create_project_tag_name_over_character_limit(self):
         """Call ``PUT /projects/{project_id}/tags/{value}`` char limit."""
         tag_ref = unit.new_project_tag_ref(name='a' * 75)
         self.put(
@@ -1596,6 +1596,13 @@ class ResourceTestCase(test_v3.RestfulTestCase,
                 'project_id': self.project_id},
             expected_status=http_client.OK)
         self.assertIn(tag_ref['name'], r.body)
+
+    def test_list_project_tags_for_project_with_no_tags(self):
+        """Call ``GET /projects/{project_id}/tags``."""
+        self.get(
+            '/projects/%(project_id)s/tags' % {
+                'project_id': self.project_id},
+            expected_status=http_client.NOT_FOUND)
 
     def test_update_project_tags(self):
         """Call ``PATCH /projects/{project_id}``."""
