@@ -32,6 +32,12 @@ class ResourceTests(object):
 
     domain_count = len(default_fixtures.DOMAINS)
 
+    def _get_random_list_of_tag_refs(self, num_tags):
+        tag_name_list = []
+        for x in range(0, num_tags):
+            tag_name_list.append('just some name' + str(x))
+        return tag_name_list
+
     def test_get_project(self):
         tenant_ref = self.resource_api.get_project(self.tenant_bar['id'])
         self.assertDictEqual(self.tenant_bar, tenant_ref)

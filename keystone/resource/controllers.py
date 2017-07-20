@@ -289,7 +289,7 @@ class ProjectV3(controller.V3Controller):
             refs = self.resource_api.list_projects(hints=hints)
 
         for ref in refs:
-            ref['tags'] = self.resource_api.list_project_tags(ref['id'])
+            ref.update(self.resource_api.list_project_tags(ref['id']))
 
         return ProjectV3.wrap_collection(request.context_dict,
                                          refs, hints=hints)

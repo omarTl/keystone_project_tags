@@ -122,7 +122,7 @@ class Routers(wsgi.RoutersBase):
         self._add_resource(
             mapper, tag_controller,
             path='/projects/{project_id}/tags',
-            get_action='list_project_tags',
+            get_head_action='list_project_tags',
             put_action='update_project_tags',
             delete_action='remove_all_project_tags',
             rel=json_home.build_v3_resource_relation(
@@ -134,7 +134,7 @@ class Routers(wsgi.RoutersBase):
         self._add_resource(
             mapper, tag_controller,
             path='/projects/{project_id}/tags/{value}',
-            get_action='get_project_tag',
+            get_head_action='get_project_tag',
             put_action='create_project_tag',
             delete_action='delete_project_tag',
             rel=json_home.build_v3_resource_relation(
