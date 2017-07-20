@@ -200,7 +200,9 @@ class Resource(base.ResourceDriverBase):
             for project_id in relevant_project_ids:
                 query = session.query(ProjectTag)
                 query = query.filter(ProjectTag.project_id == project_id)
-                if query.distinct(ProjectTag.name).count() == len(tag_names):
+                names = query.distinct(ProjectTag.name).all()
+                result = map (lambda x:x['name'],names)
+                if sorted(result) == sorted(tag_names):
                     filtered_project_ids.append(project_id)
             return filtered_project_ids
 
@@ -224,23 +226,19 @@ class Resource(base.ResourceDriverBase):
             relevant_project_ids = []
             blacklist_project_ids = []
             filtered_project_ids = []
-            # Extract out unique project ids that contain any of
-            # provided tags
+
             query = session.query(ProjectTag)
             query = query.filter(ProjectTag.name.in_(tag_names))
             query = query.distinct(
                 ProjectTag.project_id).group_by(ProjectTag.project_id)
             for q in query:
                     relevant_project_ids.append(q['project_id'])
-            # With a unique list, query the ProjectTags table
-            # and obtain a count of how many unique tag names exist
-            # with that unique project_id and if the count is the
-            # same as length of tag_names, return those project_ids
-            # Then, call list project by ids.
             for relevant_id in relevant_project_ids:
                 query = session.query(ProjectTag)
                 query = query.filter(ProjectTag.project_id == relevant_id)
-                if query.distinct(ProjectTag.name).count() == len(tag_names):
+                names = query.distinct(ProjectTag.name).all()
+                result = map (lambda x:x['name'],names)
+                if sorted(result) == sorted(tag_names):
                     blacklist_project_ids.append(relevant_id)
             query = session.query(Project)
             query = query.filter(~Project.id.in_(blacklist_project_ids))
