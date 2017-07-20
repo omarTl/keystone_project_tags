@@ -741,7 +741,7 @@ class ResourceTestCase(test_v3.RestfulTestCase,
         # Create a list of tags and a project
         tag_names = []
         for tag in tags:
-            tag_names.append(tag['name'])
+            tag_names.append(tag)
         # Extract out the tag names from list of tag objects
         tag_string = ','.join(tag_names)
         # self.get with query and valid projectlistresponse
@@ -759,7 +759,7 @@ class ResourceTestCase(test_v3.RestfulTestCase,
         # Create a list of tags and a project
         tag_names = []
         for tag in tags:
-            tag_names.append(tag['name'])
+            tag_names.append(tag)
         # Extract out the tag names from list of tag objects
 
         # self.get with query and valid projectlistresponse
@@ -779,7 +779,7 @@ class ResourceTestCase(test_v3.RestfulTestCase,
         # Create a list of tags and a project
         tag_names = []
         for tag in tags:
-            tag_names.append(tag['name'])
+            tag_names.append(tag)
         # Extract out the tag names from list of tag objects
         tag_string = ','.join(tag_names)
 
@@ -798,7 +798,7 @@ class ResourceTestCase(test_v3.RestfulTestCase,
         # Create a list of tags and a project
         tag_names = []
         for tag in tags:
-            tag_names.append(tag['name'])
+            tag_names.append(tag)
         # Extract out the tag names from list of tag objects
 
         # self.get with query and valid projectlistresponse
