@@ -401,6 +401,11 @@ class ProjectTagNotFound(NotFound):
     message_format = _("Could not find project tag: %(project_tag_id)s.")
 
 
+class ProjectTagsNotFound(NotFound):
+    message_format = _("Could not find any project tags for project "
+                       "id: %(project_id)s.")
+
+
 class TokenNotFound(NotFound):
     message_format = _("Could not find token: %(token_id)s.")
 
