@@ -390,8 +390,11 @@ class ProjectTagV3(controller.V3Controller):
     @controller.protected()
     def create_project_tag(self, request, project_id, value):
         validation.lazy_validate(schema.project_tag_create, value)
-        return self.resource_api.create_project_tag(
+        self.resource_api.create_project_tag(
             project_id, value, initiator=request.audit_initiator)
+        r = request.context_dict
+        url = r['host_url'] + r['environment']['REQUEST_URI']
+        return url
 
     @controller.protected()
     def get_project_tag(self, request, project_id, value):
