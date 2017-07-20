@@ -943,8 +943,6 @@ class Manager(manager.Manager):
         self._check_project_exists(project_id)
         resp = {}
         resp['tags'] = self.driver.list_project_tags(project_id)
-        if len(resp['tags']) == 0:
-            raise exception.ProjectTagsNotFound(project_id=project_id)
         return resp
 
     def delete_project_tag(self, project_id, project_tag_name):

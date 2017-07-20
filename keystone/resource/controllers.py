@@ -289,7 +289,8 @@ class ProjectV3(controller.V3Controller):
             refs = self.resource_api.list_projects(hints=hints)
 
         for ref in refs:
-            ref.update(self.resource_api.list_project_tags(ref['id']))
+            ref['tags'] = self.resource_api.list_project_tags(
+                ref['id'])['tags']
 
         return ProjectV3.wrap_collection(request.context_dict,
                                          refs, hints=hints)
@@ -356,7 +357,7 @@ class ProjectV3(controller.V3Controller):
     @controller.protected()
     def get_project(self, request, project_id):
         ref = self.resource_api.get_project(project_id)
-        ref['tags'] = self.resource_api.list_project_tags(ref['id'])
+        ref['tags'] = self.resource_api.list_project_tags(ref['id'])['tags']
         self._expand_project_ref(request, ref)
         return ProjectV3.wrap_member(request.context_dict, ref)
 
@@ -393,8 +394,15 @@ class ProjectTagV3(controller.V3Controller):
         self.resource_api.create_project_tag(
             project_id, value, initiator=request.audit_initiator)
         r = request.context_dict
-        url = r['host_url'] + r['environment']['REQUEST_URI']
-        return url
+        try:
+            url = r['host_url'] + r['environment']['REQUEST_URI']
+        except Exception:
+            url = r['path']
+        resp = {}
+        resp['links'] = {"next": None,
+                         "previous": None,
+                         "self": url}
+        return resp
 
     @controller.protected()
     def get_project_tag(self, request, project_id, value):
@@ -409,7 +417,10 @@ class ProjectTagV3(controller.V3Controller):
     # TODO(aselius): Add hints to provide more info about limits etc.
     @controller.protected()
     def list_project_tags(self, request, project_id):
-        return self.resource_api.list_project_tags(project_id)
+        resp = self.resource_api.list_project_tags(project_id)
+        if len(resp['tags']) == 0:
+            raise exception.ProjectTagsNotFound(project_id=project_id)
+        return resp
 
     @controller.protected()
     def update_project_tags(self, request, project_id, tags):
