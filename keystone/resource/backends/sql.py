@@ -416,9 +416,10 @@ class ProjectTag(sql.ModelBase, sql.ModelDictMixin):
         return d
 
     __tablename__ = 'project_tag'
-    attributes = ['project_id', 'name']
+    attributes = ['id', 'project_id', 'name']
+    id = sql.Column(sql.Integer(), primary_key=True)
     project_id = sql.Column(
         sql.String(64), sql.ForeignKey('project.id', ondelete='CASCADE'),
-        nullable=False, primary_key=True)
-    name = sql.Column(sql.String(60), nullable=False, primary_key=True)
+        nullable=False)
+    name = sql.Column(sql.String(60), nullable=False)
     __table_args__ = (sql.UniqueConstraint('project_id', 'name'),)
