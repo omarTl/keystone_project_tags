@@ -1559,7 +1559,7 @@ class ResourceTests(object):
 
         tags = []
         for _ in range(0, tag_size):
-            tags.append(uuid.uuid4().hex)
+            tags.append(unicode(uuid.uuid4().hex))
 
         return project, tags
 
@@ -1599,7 +1599,7 @@ class ResourceTests(object):
 
     def test_get_project_contains_tags(self):
         project, _ = self._create_project_and_tags(1)
-        tag = 'foo'
+        tag = unicode('foo')
         self.resource_api.create_project_tag(project['id'], tag)
         project_refs = self.resource_api.list_projects_with_tags(tag)
         tag_refs = self.resource_api.get_project_tag(project['id'], tag)
@@ -1629,7 +1629,7 @@ class ResourceTests(object):
     def test_create_project_tag_with_trailing_whitespace(self):
         # PUT /v3/projects/{project_id}/tags/{tag}
         project, _ = self._create_project_and_tags(1)
-        tag = uuid.uuid4().hex + '   '
+        tag = unicode(uuid.uuid4().hex + '   ')
         resp = self.resource_api.create_project_tag(project['id'], tag)
         self.assertEqual(project['id'], resp['project_id'])
         self.assertEqual(tag.strip(), resp['name'])
@@ -1639,15 +1639,15 @@ class ResourceTests(object):
         for tag in tags:
             self.resource_api.create_project_tag(project['id'], tag)
 
-        last_tag = 'tag51'
+        last_tag = unicode('tag51')
         self.assertRaises(exception.ValidationError,
                           self.resource_api.create_project_tag,
                           project['id'], last_tag)
 
     def test_create_project_tag_case_creates_different_tags(self):
         project, tags = self._create_project_and_tags(1)
-        tag_lower = 'aaa'
-        tag_upper = 'AAA'
+        tag_lower = unicode('aaa')
+        tag_upper = unicode('AAA')
 
         self.resource_api.create_project_tag(project['id'], tag_lower)
         self.resource_api.create_project_tag(project['id'], tag_upper)
@@ -1663,7 +1663,7 @@ class ResourceTests(object):
         self.assertEqual(len(project_tag_ref['tags']), 2)
 
         # Update project to only have one tag
-        tags = ['one']
+        tags = [unicode('one')]
         self.resource_api.update_project_tags(project['id'], tags)
         project_tag_ref = self.resource_api.list_project_tags(
             project['id'])
@@ -1690,7 +1690,7 @@ class ResourceTests(object):
         self.assertRaises(exception.ProjectTagNotFound,
                           self.resource_api.delete_project_tag,
                           uuid.uuid4().hex,
-                          uuid.uuid4().hex)
+                          unicode(uuid.uuid4().hex))
 
     def test_remove_all_project_tags(self):
         project, tags = self._create_project_and_tags(5)
@@ -1793,7 +1793,7 @@ class ResourceDriverTests(object):
     def test_create_project_tag(self):
         project = self._create_project()
         project_tag = {
-            'name': uuid.uuid4().hex,
+            'name': unicode(uuid.uuid4().hex),
             'id': 1,
             'project_id': project['id'],
         }
@@ -1813,7 +1813,7 @@ class ResourceDriverTests(object):
     def test_create_project_tag_null_project_id(self):
         self._create_project()
         project_tag = {
-            'name': uuid.uuid4().hex,
+            'name': unicode(uuid.uuid4().hex),
             'id': 1,
             'project_id': None
         }
@@ -1824,14 +1824,14 @@ class ResourceDriverTests(object):
     def test_create_project_tags_same_id_conflict(self):
         project = self._create_project()
         project_tag = {
-            'name': uuid.uuid4().hex,
+            'name': unicode(uuid.uuid4().hex),
             'id': 1,
             'project_id': project['id']
         }
         self.driver.create_project_tag(project_tag)
 
         project_tag = {
-            'name': uuid.uuid4().hex,
+            'name': unicode(uuid.uuid4().hex),
             'id': 1,
             'project_id': project['id']
         }
@@ -1842,7 +1842,7 @@ class ResourceDriverTests(object):
     def test_create_project_tags_same_name_conflict(self):
         project = self._create_project()
         project_tag = {
-            'name': 'some_valid_name',
+            'name': unicode('some_valid_name'),
             'id': 1,
             'project_id': project['id']
         }
