@@ -33,7 +33,7 @@ def upgrade(migrate_engine):
                    sql.ForeignKey(project_table.c.id, ondelete='CASCADE'),
                    nullable=False),
         sql.Column('name',
-                   sql.String(60),
+                   sql.Unicode(60),
                    nullable=False),
         sql.UniqueConstraint('project_id', 'name'),
         mysql_engine='InnoDB',
