@@ -296,13 +296,11 @@ class ResourceDriverBase(object):
 
             type: object
             properties:
-                id:
-                    type: integer
                 name:
                     type: string
                 project_id:
                     type: [string, null]
-            required: [id, name, project_id]
+            required: [name, project_id]
             additionalProperties: false
 
         :raises keystone.exception.ProjectNotFound: if project_id does not

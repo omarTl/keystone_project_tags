@@ -527,9 +527,7 @@ class ProjectTagsValidationTestCase(unit.BaseTestCase):
                           tags)
 
     def test_validate_update_project_tags_max_values(self):
-        tags = []
-        for i in range(_MAX_PROJECT_TAG_COUNT):
-            tags.append('tag' + str(i))
+        tags = ['tag%d' % i for i in range(_MAX_PROJECT_TAG_COUNT)]
         self.update_project_tags_validator.validate(tags)
 
         # Should fail for higher than max value, which is 50

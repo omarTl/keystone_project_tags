@@ -741,7 +741,7 @@ class ResourceTestCase(test_v3.RestfulTestCase,
         project, tags = self._create_project_and_tags(tag_size=2)
         # Create a list of tags and a project
         # Extract out the tag names from list of tag objects
-        tag_string = ','.join(tags[0])
+        tag_string = ','.join(tags)
         # self.get with query and valid projectlistresponse
         r = self.get('/projects?tags=%(values)s' % {
             'values': tag_string})
@@ -1471,12 +1471,11 @@ class ResourceTestCase(test_v3.RestfulTestCase,
                 'project_id': self.project_id,
                 'value': tag_ref['name']},
             expected_status=http_client.OK)
-        r = self.delete(
+        self.delete(
             '/projects/%(project_id)s/tags/%(value)s' % {
                 'project_id': self.project_id,
                 'value': tag_ref['name']},
             expected_status=http_client.NO_CONTENT)
-        self.assertEqual(r.body, '')
 
     def test_remove_all_project_tags(self):
         """Call ``Delete /projects/{project_id}/tags``."""
@@ -1487,11 +1486,10 @@ class ResourceTestCase(test_v3.RestfulTestCase,
                 'project_id': self.project_id,
                 'value': tag_ref['name']},
             expected_status=http_client.OK)
-        r = self.delete(
+        self.delete(
             '/projects/%(project_id)s/tags/' % {
                 'project_id': self.project_id},
             expected_status=http_client.NO_CONTENT)
-        self.assertEqual(r.body, '')
 
     def test_create_project_tag_invalid_project_id(self):
         """Call ``PUT /projects/{project_id}/tags/{value}`` invalid id."""

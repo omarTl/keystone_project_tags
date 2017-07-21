@@ -24,12 +24,13 @@ def upgrade(migrate_engine):
     project_tags_table = sql.Table(
         'project_tag',
         meta,
-        sql.Column('id', sql.Integer, primary_key=True, autoincrement=True),
         sql.Column('project_id', sql.String(64),
                    sql.ForeignKey(project_table.c.id, ondelete='CASCADE'),
-                   nullable=False),
-        sql.Column('name', sql.String(60), nullable=False),
-        sql.UniqueConstraint('project_id', 'name'),
+                   nullable=False,
+                   primary_key=True),
+        sql.Column('name', sql.String(60, collation='utf8_bin'),
+                   nullable=False,
+                   primary_key=True),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )

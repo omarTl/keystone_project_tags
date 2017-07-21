@@ -226,7 +226,6 @@ class Resource(base.ResourceDriverBase):
             relevant_project_ids = []
             blacklist_project_ids = []
             filtered_project_ids = []
-
             query = session.query(ProjectTag)
             query = query.filter(ProjectTag.name.in_(tag_names))
             query = query.distinct(
@@ -352,8 +351,7 @@ class Resource(base.ResourceDriverBase):
             project_tag_refs = query.filter(
                 ProjectTag.project_id == project_id)
             return [project_tag_ref.to_dict()['name']
-                    for project_tag_ref in project_tag_refs
-                    if not self._is_hidden_ref(project_tag_ref)]
+                    for project_tag_ref in project_tag_refs]
 
     @sql.handle_conflicts(conflict_type='project_tag')
     def delete_project_tag(self, project_id, tag_name):
@@ -418,10 +416,9 @@ class ProjectTag(sql.ModelBase, sql.ModelDictMixin):
         return d
 
     __tablename__ = 'project_tag'
-    attributes = ['id', 'project_id', 'name']
-    id = sql.Column(sql.Integer(), primary_key=True)
+    attributes = ['project_id', 'name']
     project_id = sql.Column(
         sql.String(64), sql.ForeignKey('project.id', ondelete='CASCADE'),
-        nullable=False)
-    name = sql.Column(sql.String(60), nullable=False)
+        nullable=False, primary_key=True)
+    name = sql.Column(sql.String(60), nullable=False, primary_key=True)
     __table_args__ = (sql.UniqueConstraint('project_id', 'name'),)
