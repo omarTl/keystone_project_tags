@@ -32,6 +32,12 @@ class ResourceTests(object):
 
     domain_count = len(default_fixtures.DOMAINS)
 
+    def _get_random_list_of_tag_refs(self, num_tags):
+        tag_name_list = []
+        for x in range(0, num_tags):
+            tag_name_list.append('just some name' + str(x))
+        return tag_name_list
+
     def test_get_project(self):
         tenant_ref = self.resource_api.get_project(self.tenant_bar['id'])
         self.assertDictEqual(self.tenant_bar, tenant_ref)
@@ -1605,18 +1611,18 @@ class ResourceTests(object):
         project, tags = self._create_project_and_tags(1)
         self.resource_api.create_project_tag(project['id'], tags[0])
         project_tag_ref = self.resource_api.list_project_tags(project['id'])
-        self.assertEqual(tags[0], project_tag_ref['tags'][0])
+        self.assertEqual(tags[0], project_tag_ref[0])
 
     def test_list_project_tags_returns_not_found(self):
         self.assertRaises(exception.ProjectNotFound,
                           self.resource_api.list_project_tags,
                           uuid.uuid4().hex)
 
-    def test_check_if_project_contains_tag(self):
+    def test_get_project_tag(self):
         # GET /v3/projects/{project_id}/tags/{tag}
         project, tags = self._create_project_and_tags(1)
         self.resource_api.create_project_tag(project['id'], tags[0])
-        contained_tags = self.resource_api.check_if_project_contains_tag(
+        contained_tags = self.resource_api.get_project_tag(
             project['id'], tags[0])
         self.assertTrue(contained_tags)
 
@@ -1654,7 +1660,7 @@ class ResourceTests(object):
         self.resource_api.update_project_tags(project['id'], tags)
         project_tag_ref = self.resource_api.list_project_tags(
             project['id'])
-        self.assertEqual(len(project_tag_ref['tags']), 2)
+        self.assertEqual(len(project_tag_ref), 2)
 
         # Update project to only have one tag
         tags = ['one']
@@ -1700,11 +1706,11 @@ class ResourceTests(object):
         self.resource_api.update_project_tags(project['id'], tags)
         project_tag_ref = self.resource_api.list_project_tags(
             project['id'])
-        self.assertEqual(len(project_tag_ref['tags']), 5)
+        self.assertEqual(len(project_tag_ref), 5)
 
         self.resource_api.remove_all_project_tags(project['id'])
         project_tag_ref = self.resource_api.list_project_tags(project['id'])
-        self.assertEqual(project_tag_ref['tags'], [])
+        self.assertEqual(project_tag_ref, [])
 
 
 class ResourceDriverTests(object):

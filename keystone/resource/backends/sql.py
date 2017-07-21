@@ -200,7 +200,9 @@ class Resource(base.ResourceDriverBase):
             for project_id in relevant_project_ids:
                 query = session.query(ProjectTag)
                 query = query.filter(ProjectTag.project_id == project_id)
-                if query.distinct(ProjectTag.name).count() == len(tag_names):
+                names = query.distinct(ProjectTag.name).all()
+                result = map(lambda x: x['name'], names)
+                if sorted(result) == sorted(tag_names):
                     filtered_project_ids.append(project_id)
             return filtered_project_ids
 
@@ -224,23 +226,18 @@ class Resource(base.ResourceDriverBase):
             relevant_project_ids = []
             blacklist_project_ids = []
             filtered_project_ids = []
-            # Extract out unique project ids that contain any of
-            # provided tags
             query = session.query(ProjectTag)
             query = query.filter(ProjectTag.name.in_(tag_names))
             query = query.distinct(
                 ProjectTag.project_id).group_by(ProjectTag.project_id)
             for q in query:
                     relevant_project_ids.append(q['project_id'])
-            # With a unique list, query the ProjectTags table
-            # and obtain a count of how many unique tag names exist
-            # with that unique project_id and if the count is the
-            # same as length of tag_names, return those project_ids
-            # Then, call list project by ids.
             for relevant_id in relevant_project_ids:
                 query = session.query(ProjectTag)
                 query = query.filter(ProjectTag.project_id == relevant_id)
-                if query.distinct(ProjectTag.name).count() == len(tag_names):
+                names = query.distinct(ProjectTag.name).all()
+                result = map(lambda x: x['name'], names)
+                if sorted(result) == sorted(tag_names):
                     blacklist_project_ids.append(relevant_id)
             query = session.query(Project)
             query = query.filter(~Project.id.in_(blacklist_project_ids))
@@ -354,8 +351,7 @@ class Resource(base.ResourceDriverBase):
             project_tag_refs = query.filter(
                 ProjectTag.project_id == project_id)
             return [project_tag_ref.to_dict()['name']
-                    for project_tag_ref in project_tag_refs
-                    if not self._is_hidden_ref(project_tag_ref)]
+                    for project_tag_ref in project_tag_refs]
 
     @sql.handle_conflicts(conflict_type='project_tag')
     def delete_project_tag(self, project_id, tag_name):
@@ -420,10 +416,9 @@ class ProjectTag(sql.ModelBase, sql.ModelDictMixin):
         return d
 
     __tablename__ = 'project_tag'
-    attributes = ['id', 'project_id', 'name']
-    id = sql.Column(sql.Integer(), primary_key=True)
+    attributes = ['project_id', 'name']
     project_id = sql.Column(
         sql.String(64), sql.ForeignKey('project.id', ondelete='CASCADE'),
-        nullable=False)
-    name = sql.Column(sql.String(60), nullable=False)
+        nullable=False, primary_key=True)
+    name = sql.Column(sql.String(60), nullable=False, primary_key=True)
     __table_args__ = (sql.UniqueConstraint('project_id', 'name'),)

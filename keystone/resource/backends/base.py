@@ -296,16 +296,12 @@ class ResourceDriverBase(object):
 
             type: object
             properties:
-                id:
-                    type: string
                 name:
                     type: string
                 project_id:
                     type: [string, null]
-                enabled:
-                    type: boolean
-            required: [id, name, project_id]
-            additionalProperties: true
+            required: [name, project_id]
+            additionalProperties: false
 
         :raises keystone.exception.ProjectNotFound: if project_id does not
                                                     exist
@@ -322,7 +318,7 @@ class ResourceDriverBase(object):
 
         :param project_id:
 
-        :returns: a list of project_tag_refs.
+        :returns: a dictionary of project tag names.
         :raises keystone.exception.ProjectNotFound: if project_id does not
                                                     exist
 

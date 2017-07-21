@@ -300,7 +300,6 @@ def new_project_tag_ref(project_id=None, **kwargs):
     if project_id is None:
         project_id = uuid.uuid4().hex
     ref = {
-        'id': uuid.uuid4().hex,
         'name': uuid.uuid4().hex,
         'project_id': project_id
     }
