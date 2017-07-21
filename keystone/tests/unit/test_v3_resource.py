@@ -726,12 +726,13 @@ class ResourceTestCase(test_v3.RestfulTestCase,
         tags = []
 
         for i in range(tag_size):
-            tag_ref = unit.new_project_tag_ref(project_id=project['id'])
-            resp = self.put('/projects/%(project_id)s/tags/%(value)s' % {
-                'project_id': tag_ref['project_id'],
-                'value': tag_ref['name']},
-                expected_status=http_client.OK)
-            tags.append(resp.result)
+            tags.append(unit.new_project_tag_ref(
+                project_id=project['id'])['name'])
+        self.put(
+            '/projects/%(project_id)s/tags' % {
+                'project_id': self.project_id},
+            body={'tags': tags},
+            expected_status=http_client.OK)
 
         return project, tags
 
@@ -739,11 +740,8 @@ class ResourceTestCase(test_v3.RestfulTestCase,
         """Call ``GET /projects?tags={tags}``."""
         project, tags = self._create_project_and_tags(tag_size=2)
         # Create a list of tags and a project
-        tag_names = []
-        for tag in tags:
-            tag_names.append(tag)
         # Extract out the tag names from list of tag objects
-        tag_string = ','.join(tag_names)
+        tag_string = ','.join(tags[0])
         # self.get with query and valid projectlistresponse
         r = self.get('/projects?tags=%(values)s' % {
             'values': tag_string})
@@ -756,15 +754,9 @@ class ResourceTestCase(test_v3.RestfulTestCase,
     def test_list_projects_filtering_by_tags_any(self):
         """Call ``GET /projects?tags-any={tags}``."""
         project, tags = self._create_project_and_tags(tag_size=2)
-        # Create a list of tags and a project
-        tag_names = []
-        for tag in tags:
-            tag_names.append(tag)
-        # Extract out the tag names from list of tag objects
-
         # self.get with query and valid projectlistresponse
         r = self.get('/projects?tags-any=%(values)s' % {
-            'values': tag_names[0]})
+            'values': tags[0]})
         self.assertValidProjectListResponse(r)
         # values from response should be equal to the project
         # created above

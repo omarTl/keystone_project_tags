@@ -201,7 +201,7 @@ class Resource(base.ResourceDriverBase):
                 query = session.query(ProjectTag)
                 query = query.filter(ProjectTag.project_id == project_id)
                 names = query.distinct(ProjectTag.name).all()
-                result = map (lambda x:x['name'],names)
+                result = map(lambda x: x['name'], names)
                 if sorted(result) == sorted(tag_names):
                     filtered_project_ids.append(project_id)
             return filtered_project_ids
@@ -237,7 +237,7 @@ class Resource(base.ResourceDriverBase):
                 query = session.query(ProjectTag)
                 query = query.filter(ProjectTag.project_id == relevant_id)
                 names = query.distinct(ProjectTag.name).all()
-                result = map (lambda x:x['name'],names)
+                result = map(lambda x: x['name'], names)
                 if sorted(result) == sorted(tag_names):
                     blacklist_project_ids.append(relevant_id)
             query = session.query(Project)

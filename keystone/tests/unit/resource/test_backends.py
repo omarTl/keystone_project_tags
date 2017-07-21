@@ -1618,11 +1618,11 @@ class ResourceTests(object):
                           self.resource_api.list_project_tags,
                           uuid.uuid4().hex)
 
-    def test_check_if_project_contains_tag(self):
+    def test_get_project_tag(self):
         # GET /v3/projects/{project_id}/tags/{tag}
         project, tags = self._create_project_and_tags(1)
         self.resource_api.create_project_tag(project['id'], tags[0])
-        contained_tags = self.resource_api.check_if_project_contains_tag(
+        contained_tags = self.resource_api.get_project_tag(
             project['id'], tags[0])
         self.assertTrue(contained_tags)
 
