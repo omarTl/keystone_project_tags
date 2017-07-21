@@ -932,7 +932,7 @@ class Manager(manager.Manager):
         ref.pop('id', None)
         return ref
 
-    def check_if_project_contains_tag(self, project_id, project_tag_name):
+    def get_project_tag(self, project_id, project_tag_name):
         """Return information for a single tag on a project."""
         self._check_project_exists(project_id)
         return self.driver.get_project_tag(project_id,
