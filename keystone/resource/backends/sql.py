@@ -421,5 +421,5 @@ class ProjectTag(sql.ModelBase, sql.ModelDictMixin):
     project_id = sql.Column(
         sql.String(64), sql.ForeignKey('project.id', ondelete='CASCADE'),
         nullable=False)
-    name = sql.Column(sql.String(60), nullable=False)
+    name = sql.Column(sql.Unicode(60), nullable=False)
     __table_args__ = (sql.UniqueConstraint('project_id', 'name'),)
