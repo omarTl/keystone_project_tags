@@ -65,8 +65,7 @@ project_tag_update = {
     'type': 'array',
     'items': _project_tag_name_properties,
     'required': [],
-    'maxItems': 50,
-    'uniqueItems': True
+    'maxItems': 50
 }
 
 _domain_properties = {

@@ -1375,7 +1375,7 @@ class ResourceTestCase(test_v3.RestfulTestCase,
             '/projects/%(project_id)s/tags/%(value)s' % {
                 'project_id': self.project_id,
                 'value': uuid.uuid4().hex},
-            expected_status=http_client.OK)
+            expected_status=http_client.NO_CONTENT)
 
     def test_create_project_tag_case_sensitivity(self):
         case_tags = ['case', 'CASE']
@@ -1384,7 +1384,7 @@ class ResourceTestCase(test_v3.RestfulTestCase,
                 '/projects/%(project_id)s/tags/%(value)s' % {
                     'project_id': self.project_id,
                     'value': tag},
-                expected_status=http_client.OK)
+                expected_status=http_client.NO_CONTENT)
 
     def test_get_project_tag(self):
         project, tags = self._create_project_and_tags(1)
@@ -1447,7 +1447,7 @@ class ResourceTestCase(test_v3.RestfulTestCase,
             '/projects/%(project_id)s/tags/%(value)s' % {
                 'project_id': project['id'],
                 'value': tags[0]},
-            expected_status=http_client.CONFLICT)
+            expected_status=http_client.NO_CONTENT)
 
     def test_create_project_tag_over_tag_limit(self):
         project, tags = self._create_project_and_tags(50)
@@ -1509,7 +1509,7 @@ class ResourceTestCase(test_v3.RestfulTestCase,
             '/projects/%(project_id)s/tags/%(value)s' % {
                 'project_id': project['id'],
                 'value': tag},
-            expected_status=http_client.OK)
+            expected_status=http_client.NO_CONTENT)
         resp = self.put(
             '/projects/%(project_id)s/tags' % {
                 'project_id': project['id']},
