@@ -192,6 +192,7 @@ class Manager(manager.Manager):
         project.setdefault('enabled', True)
         project['name'] = project['name'].strip()
         project.setdefault('description', '')
+        tags = project.pop('tags', [])
 
         # For regular projects, the controller will ensure we have a valid
         # domain_id. For projects acting as a domain, the project_id
@@ -215,6 +216,9 @@ class Manager(manager.Manager):
             raise exception.Conflict(
                 type='project',
                 details=self._generate_project_name_conflict_msg(project))
+
+        for tag in tags:
+            self.create_project_tag(project_id, tag)
 
         if project.get('is_domain'):
             notifications.Audit.created(self._DOMAIN, project_id, initiator)
@@ -918,9 +922,8 @@ class Manager(manager.Manager):
         """Create a new tag on project."""
         self._check_project_exists(project_id)
         self._check_limit(project_id)
-        project_tag = {}
-        project_tag['project_id'] = project_id
-        project_tag['name'] = value.strip()
+        project_tag = {'project_id': project_id,
+                       'name': value.strip()}
         try:
             ref = self.driver.create_project_tag(project_tag)
         except exception.Conflict:
@@ -941,9 +944,7 @@ class Manager(manager.Manager):
     def list_project_tags(self, project_id):
         """List all tags on project."""
         self._check_project_exists(project_id)
-        resp = {}
-        resp['tags'] = self.driver.list_project_tags(project_id)
-        return resp
+        return {'tags': self.driver.list_project_tags(project_id)}
 
     def delete_project_tag(self, project_id, project_tag_name):
         """Delete single tag from project."""
@@ -1452,7 +1453,7 @@ class DomainConfigManager(manager.Manager):
                     'value: %(value)s.')
 
             if warning_msg:
-                LOG.warning(warning_msg % {
+                LOG.warning(warning_msg, {
                     'domain': domain_id,
                     'group': each_whitelisted['group'],
                     'option': each_whitelisted['option'],

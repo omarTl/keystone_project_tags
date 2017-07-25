@@ -89,9 +89,6 @@ INITIAL_TABLE_STRUCTURE = {
         'id', 'name', 'extra', 'description', 'enabled', 'domain_id',
         'parent_id',
     ],
-    'project_tag': [
-        'project_id', 'name'
-    ],
     'role': [
         'id', 'name', 'extra',
     ],
@@ -2377,10 +2374,12 @@ class FullMigration(SqlMigrateBase, unit.TestCase):
         self.assertTableExists(table_name)
         self.assertTableColumns(
             table_name,
-            ['id', 'project_id', 'name'])
+            ['project_id', 'name'])
 
-        project_table = sql.Table('project', self.metadata, autoload=True)
-        tag_table = sql.Table('project_tag', self.metadata, autoload=True)
+        project_table = sqlalchemy.Table(
+            'project', self.metadata, autoload=True)
+        tag_table = sqlalchemy.Table(
+            'project_tag', self.metadata, autoload=True)
 
         session = self.sessionmaker()
         project_id = uuid.uuid4().hex

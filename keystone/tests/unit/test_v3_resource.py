@@ -719,88 +719,47 @@ class ResourceTestCase(test_v3.RestfulTestCase,
                          project.
 
         :returns project: the project that was created.
-        :returns tags: a list of project tags that were attached to the
-                       project.
+        :returns tags: a list of project tag names that were attached to
+                       the project.
         """
-        project = self.project
-        tags = []
-
-        for i in range(tag_size):
-            tags.append(unit.new_project_tag_ref(
-                project_id=project['id'])['name'])
-        self.put(
-            '/projects/%(project_id)s/tags' % {
-                'project_id': self.project_id},
-            body={'tags': tags},
-            expected_status=http_client.OK)
-
-        return project, tags
+        tags = [uuid.uuid4().hex for i in range(tag_size)]
+        new_ref = unit.new_project_ref(domain_id=self.domain_id, tags=tags)
+        resp = self.post('/projects', body={'project': new_ref})
+        return resp.result['project'], tags
 
     def test_list_projects_filtering_by_tags(self):
         """Call ``GET /projects?tags={tags}``."""
-        project, tags = self._create_project_and_tags(tag_size=2)
-        # Create a list of tags and a project
-        # Extract out the tag names from list of tag objects
+        project, tags = self._create_project_and_tags(2)
         tag_string = ','.join(tags)
-        # self.get with query and valid projectlistresponse
-        r = self.get('/projects?tags=%(values)s' % {
+        resp = self.get('/projects?tags=%(values)s' % {
             'values': tag_string})
-        self.assertValidProjectListResponse(r)
-        # values from response should be equal to the project
-        # created above
-        projects_result = r.result['projects']
-        self.assertEqual(project['id'], projects_result[0]['id'])
+        self.assertValidProjectListResponse(resp)
+        self.assertEqual(project['id'], resp.result['projects'][0]['id'])
 
     def test_list_projects_filtering_by_tags_any(self):
         """Call ``GET /projects?tags-any={tags}``."""
-        project, tags = self._create_project_and_tags(tag_size=2)
-        # self.get with query and valid projectlistresponse
-        r = self.get('/projects?tags-any=%(values)s' % {
+        project, tags = self._create_project_and_tags(2)
+        resp = self.get('/projects?tags-any=%(values)s' % {
             'values': tags[0]})
-        self.assertValidProjectListResponse(r)
-        # values from response should be equal to the project
-        # created above
-        projects_result = r.result['projects']
-        self.assertEqual(project['id'], projects_result[0]['id'])
+        self.assertValidProjectListResponse(resp)
+        self.assertEqual(project['id'], resp.result['projects'][0]['id'])
 
-    # Theses tests are a little different - they need to ref
-    # projects not associated with the tags
     def test_list_projects_filtering_by_not_tags(self):
         """Call ``GET /projects?not-tags={tags}``."""
-        project, tags = self._create_project_and_tags(tag_size=2)
-        # Create a list of tags and a project
-        tag_names = []
-        for tag in tags:
-            tag_names.append(tag)
-        # Extract out the tag names from list of tag objects
-        tag_string = ','.join(tag_names)
-
-        # self.get with query and valid projectlistresponse
-        r = self.get('/projects?not-tags=%(values)s' % {
+        project, tags = self._create_project_and_tags(2)
+        tag_string = ','.join(tags)
+        resp = self.get('/projects?not-tags=%(values)s' % {
             'values': tag_string})
-        self.assertValidProjectListResponse(r)
-        # values from response should be equal to the project
-        # created above
-        projects_result = r.result['projects']
-        self.assertNotEqual(project['id'], projects_result[0]['id'])
+        self.assertValidProjectListResponse(resp)
+        self.assertNotEqual(project['id'], resp.result['projects'][0]['id'])
 
     def test_list_projects_filtering_by_not_tags_any(self):
         """Call ``GET /projects?not-tags-any={tags}``."""
         project, tags = self._create_project_and_tags(tag_size=2)
-        # Create a list of tags and a project
-        tag_names = []
-        for tag in tags:
-            tag_names.append(tag)
-        # Extract out the tag names from list of tag objects
-
-        # self.get with query and valid projectlistresponse
-        r = self.get('/projects?not-tags-any=%(values)s' % {
-            'values': tag_names[0]})
-        self.assertValidProjectListResponse(r)
-        # values from response should be equal to the project
-        # created above
-        projects_result = r.result['projects']
-        self.assertNotEqual(project['id'], projects_result[0]['id'])
+        resp = self.get('/projects?not-tags-any=%(values)s' % {
+            'values': tags[0]})
+        self.assertValidProjectListResponse(resp)
+        self.assertNotEqual(project['id'], resp.result['projects'][0]['id'])
 
     def test_list_projects_filtering_by_parent_id(self):
         """Call ``GET /projects?parent_id={project_id}``."""
@@ -1412,238 +1371,171 @@ class ResourceTestCase(test_v3.RestfulTestCase,
             expected_status=http_client.FORBIDDEN)
 
     def test_create_project_tag(self):
-        """Call ``PUT /projects/{project_id}/tags``."""
-        tag_ref = unit.new_project_tag_ref(project_id=self.project_id)
         self.put(
             '/projects/%(project_id)s/tags/%(value)s' % {
                 'project_id': self.project_id,
-                'value': tag_ref['name']},
+                'value': uuid.uuid4().hex},
             expected_status=http_client.OK)
 
     def test_create_project_tag_case_sensitivity(self):
-        """Call ``PUT /projects/{project_id}/tags``."""
-        # Create two tags that differ by case only, this should pass
-        tag_ref = unit.new_project_tag_ref(
-            project_id=self.project_id, name='case')
-        self.put(
-            '/projects/%(project_id)s/tags/%(value)s' % {
-                'project_id': self.project_id,
-                'value': tag_ref['name']},
-            expected_status=http_client.OK)
-        tag_ref = unit.new_project_tag_ref(
-            project_id=self.project_id, name='CASE')
-        self.put(
-            '/projects/%(project_id)s/tags/%(value)s' % {
-                'project_id': self.project_id,
-                'value': tag_ref['name']},
-            expected_status=http_client.OK)
-
-    def test_get_project_tag(self):
-        """Call ``GET /projects/{project_id}/tags``."""
-        tag_ref = unit.new_project_tag_ref(project_id=self.project_id)
-        # Create tag to find
-        self.put(
-            '/projects/%(project_id)s/tags/%(value)s' % {
-                'project_id': self.project_id,
-                'value': tag_ref['name']},
-            expected_status=http_client.OK)
-        self.get(
-            '/projects/%(project_id)s/tags/%(value)s' % {
-                'project_id': self.project_id,
-                'value': tag_ref['name']},
-            expected_status=http_client.NO_CONTENT)
-
-    def test_get_project_tag_that_doesnt_exist(self):
-        """Call ``GET /projects/{project_id}/tags``."""
-        r = self.get(
-            '/projects/%(project_id)s/tags/%(value)s' % {
-                'project_id': self.project_id,
-                'value': "I_dont_exist"},
-            expected_status=http_client.NOT_FOUND)
-        self.assertIn('error', r.body)
-
-    def test_delete_project_tag(self):
-        """Call ``Delete /projects/{project_id}/tags/value``."""
-        tag_ref = unit.new_project_tag_ref(project_id=self.project_id)
-        # Create tag to delete
-        self.put(
-            '/projects/%(project_id)s/tags/%(value)s' % {
-                'project_id': self.project_id,
-                'value': tag_ref['name']},
-            expected_status=http_client.OK)
-        self.delete(
-            '/projects/%(project_id)s/tags/%(value)s' % {
-                'project_id': self.project_id,
-                'value': tag_ref['name']},
-            expected_status=http_client.NO_CONTENT)
-
-    def test_remove_all_project_tags(self):
-        """Call ``Delete /projects/{project_id}/tags``."""
-        tag_ref = unit.new_project_tag_ref(project_id=self.project_id)
-        # Create tag to delete
-        self.put(
-            '/projects/%(project_id)s/tags/%(value)s' % {
-                'project_id': self.project_id,
-                'value': tag_ref['name']},
-            expected_status=http_client.OK)
-        self.delete(
-            '/projects/%(project_id)s/tags/' % {
-                'project_id': self.project_id},
-            expected_status=http_client.NO_CONTENT)
-
-    def test_create_project_tag_invalid_project_id(self):
-        """Call ``PUT /projects/{project_id}/tags/{value}`` invalid id."""
-        tag_ref = unit.new_project_tag_ref()
-        self.put(
-            '/projects/%(project_id)s/tags/%(value)s' % {
-                'project_id': tag_ref['project_id'],
-                'value': tag_ref['name']},
-            expected_status=http_client.NOT_FOUND)
-
-    def test_create_project_tag_unsafe_name(self):
-        """Call ``PUT /projects/{project_id}/tags/{value}`` unsafe names."""
-        # test for ','
-        tag_ref = unit.new_project_tag_ref(name='invalid,name')
-        self.put(
-            '/projects/%(project_id)s/tags/%(value)s' % {
-                'project_id': self.project_id,
-                'value': tag_ref['name']},
-            expected_status=http_client.BAD_REQUEST)
-
-    def test_create_project_tag_alread_exists(self):
-        """Call ``PUT /projects/{project_id}/tags/{value}`` unsafe names."""
-        # test for ','
-        tag_ref = unit.new_project_tag_ref(name='I exist')
-        self.put(
-            '/projects/%(project_id)s/tags/%(value)s' % {
-                'project_id': self.project_id,
-                'value': tag_ref['name']},
-            expected_status=http_client.OK)
-        self.put(
-            '/projects/%(project_id)s/tags/%(value)s' % {
-                'project_id': self.project_id,
-                'value': tag_ref['name']},
-            expected_status=http_client.CONFLICT)
-
-    def test_create_project_tag_over_tag_limit(self):
-        tags = []
-        max_tags = 50
-        for x in range(0, max_tags):
-            tags.append(unit.new_project_tag_ref())
-        # Create num(max_tags) tags
-        for index, tag in enumerate(tags):
+        case_tags = ['case', 'CASE']
+        for tag in case_tags:
             self.put(
                 '/projects/%(project_id)s/tags/%(value)s' % {
                     'project_id': self.project_id,
-                    'value': tags[index]['name']},
+                    'value': tag},
                 expected_status=http_client.OK)
-        tag_ref = unit.new_project_tag_ref()
-        # Assert bad request on the tag that is over the limit
+
+    def test_get_project_tag(self):
+        project, tags = self._create_project_and_tags(1)
+        self.get(
+            '/projects/%(project_id)s/tags/%(value)s' % {
+                'project_id': project['id'],
+                'value': tags[0]},
+            expected_status=http_client.NO_CONTENT)
+
+    def test_get_project_tag_that_doesnt_exist(self):
+        self.get(
+            '/projects/%(project_id)s/tags/%(value)s' % {
+                'project_id': self.project_id,
+                'value': 'I_dont_exist'},
+            expected_status=http_client.NOT_FOUND)
+
+    def test_delete_project_tag(self):
+        project, tags = self._create_project_and_tags(1)
+        self.delete(
+            '/projects/%(project_id)s/tags/%(value)s' % {
+                'project_id': project['id'],
+                'value': tags[0]},
+            expected_status=http_client.NO_CONTENT)
+        self.get(
+            '/projects/%(project_id)s/tags/%(value)s' % {
+                'project_id': self.project_id,
+                'value': tags[0]},
+            expected_status=http_client.NOT_FOUND)
+
+    def test_remove_all_project_tags(self):
+        project, tags = self._create_project_and_tags(5)
+        self.delete(
+            '/projects/%(project_id)s/tags/' % {
+                'project_id': project['id']},
+            expected_status=http_client.NO_CONTENT)
+        self.get(
+            '/projects/%(project_id)s/tags/%(value)s' % {
+                'project_id': self.project_id,
+                'value': tags[0]},
+            expected_status=http_client.NOT_FOUND)
+
+    def test_create_project_tag_invalid_project_id(self):
+        self.put(
+            '/projects/%(project_id)s/tags/%(value)s' % {
+                'project_id': uuid.uuid4().hex,
+                'value': uuid.uuid4().hex},
+            expected_status=http_client.NOT_FOUND)
+
+    def test_create_project_tag_unsafe_name(self):
+        tag = uuid.uuid4().hex + ','
         self.put(
             '/projects/%(project_id)s/tags/%(value)s' % {
                 'project_id': self.project_id,
-                'value': tag_ref['name']},
+                'value': tag},
+            expected_status=http_client.BAD_REQUEST)
+
+    def test_create_project_tag_already_exists(self):
+        project, tags = self._create_project_and_tags(1)
+        self.put(
+            '/projects/%(project_id)s/tags/%(value)s' % {
+                'project_id': project['id'],
+                'value': tags[0]},
+            expected_status=http_client.CONFLICT)
+
+    def test_create_project_tag_over_tag_limit(self):
+        project, tags = self._create_project_and_tags(50)
+        self.put(
+            '/projects/%(project_id)s/tags/%(value)s' % {
+                'project_id': project['id'],
+                'value': uuid.uuid4().hex},
             expected_status=http_client.BAD_REQUEST)
 
     def test_create_project_tag_name_over_character_limit(self):
-        """Call ``PUT /projects/{project_id}/tags/{value}`` char limit."""
-        tag_ref = unit.new_project_tag_ref(name='a' * 75)
+        tag = 'a' * 61
         self.put(
             '/projects/%(project_id)s/tags/%(value)s' % {
                 'project_id': self.project_id,
-                'value': tag_ref['name']},
+                'value': tag},
             expected_status=http_client.BAD_REQUEST)
 
     def test_delete_tag_invalid_project_id(self):
-        """Call ``Delete /projects/{project_id}/tags`` invalid id."""
-        tag_ref = unit.new_project_tag_ref()
         self.delete(
             '/projects/%(project_id)s/tags/%(value)s' % {
-                'project_id': tag_ref['project_id'],
-                'value': tag_ref['name']},
+                'project_id': uuid.uuid4().hex,
+                'value': uuid.uuid4().hex},
             expected_status=http_client.NOT_FOUND)
 
     def test_delete_project_tag_not_found(self):
-        """Call ``DELETE /projects/{project_id}/tags/{value}``."""
-        tag_ref = unit.new_project_ref()
         self.delete(
             '/projects/%(project_id)s/tags/%(value)s' % {
                 'project_id': self.project_id,
-                'value': tag_ref['name']},
+                'value': uuid.uuid4().hex},
             expected_status=http_client.NOT_FOUND)
 
     def test_list_project_tags(self):
-        """Call ``GET /projects/{project_id}/tags``."""
-        tag_ref = unit.new_project_tag_ref(project_id=self.project_id)
-        # Create tag to list
-        self.put(
-            '/projects/%(project_id)s/tags/%(value)s' % {
-                'project_id': self.project_id,
-                'value': tag_ref['name']},
-            expected_status=http_client.OK)
-        r = self.get(
+        project, tags = self._create_project_and_tags(5)
+        resp = self.get(
             '/projects/%(project_id)s/tags' % {
-                'project_id': self.project_id},
+                'project_id': project['id']},
             expected_status=http_client.OK)
-        self.assertIn(tag_ref['name'], r.body)
+        self.assertIn(tags[0], resp.result["tags"])
 
     def test_list_project_tags_for_project_with_no_tags(self):
-        """Call ``GET /projects/{project_id}/tags``."""
         self.get(
             '/projects/%(project_id)s/tags' % {
                 'project_id': self.project_id},
             expected_status=http_client.NOT_FOUND)
 
     def test_update_project_tags(self):
-        """Call ``PATCH /projects/{project_id}``."""
-        tag_ref = unit.new_project_tag_ref(project_id=self.project_id)
-        # Create tag to list
+        project, tags = self._create_project_and_tags(5)
+        resp = self.put(
+            '/projects/%(project_id)s/tags' % {
+                'project_id': project['id']},
+            body={'tags': tags},
+            expected_status=http_client.OK)
+        self.assertIn(tags[1], resp.result["tags"])
+
+    def test_update_project_tags_removes_previous_tags(self):
+        tag = uuid.uuid4().hex
+        project, tags = self._create_project_and_tags(5)
         self.put(
             '/projects/%(project_id)s/tags/%(value)s' % {
-                'project_id': self.project_id,
-                'value': tag_ref['name']},
+                'project_id': project['id'],
+                'value': tag},
             expected_status=http_client.OK)
-        list_of_tag_names = ['with%20space', 'This:that', 'valid']
-        r = self.put(
+        resp = self.put(
             '/projects/%(project_id)s/tags' % {
-                'project_id': self.project_id},
-            body={'tags': list_of_tag_names},
+                'project_id': project['id']},
+            body={'tags': tags},
             expected_status=http_client.OK)
-        self.assertNotIn(tag_ref['name'], r.body)
-        self.assertIn(list_of_tag_names[1], r.body)
+        self.assertNotIn(tag, resp.result["tags"])
+        self.assertIn(tags[1], resp.result["tags"])
 
     def test_update_project_tags_unsafe_names(self):
-        """Call ``PUT /projects/{project_id}``."""
-        tag_ref = unit.new_project_tag_ref(project_id=self.project_id)
-        # Create tag to list
-        self.put(
-            '/projects/%(project_id)s/tags/%(value)s' % {
-                'project_id': self.project_id,
-                'value': tag_ref['name']},
-            expected_status=http_client.OK)
-        tag_ref_name = ['I,am/very@unsafe!', 'Me,Too!']
-        self.put(
-            '/projects/%(project_id)s/tags' % {
-                'project_id': self.project_id},
-            body={'tags': tag_ref_name},
-            expected_status=http_client.BAD_REQUEST)
+        project, tags = self._create_project_and_tags(5)
+        invalid_chars = [',', '/']
+        for char in invalid_chars:
+            tags[0] = uuid.uuid4().hex + char
+            self.put(
+                '/projects/%(project_id)s/tags' % {
+                    'project_id': project['id']},
+                body={'tags': tags},
+                expected_status=http_client.BAD_REQUEST)
 
     def test_update_project_tags_with_too_many_tags(self):
-        """Call ``PUT /projects/{project_id}``."""
-        tag_ref = unit.new_project_tag_ref(project_id=self.project_id)
-        # Create tag to list
+        project, _ = self._create_project_and_tags(1)
+        tags = [uuid.uuid4().hex for i in range(51)]
+        tags.append(uuid.uuid4().hex)
         self.put(
-            '/projects/%(project_id)s/tags/%(value)s' % {
-                'project_id': self.project_id,
-                'value': tag_ref['name']},
-            expected_status=http_client.OK)
-        list_of_tag_names = []
-        for num in range(51):
-            list_of_tag_names.append('name' + str(num))
-        self.put(
-            '/projects/%(project_id)s/tags' % {
-                'project_id': self.project_id},
-            body={'tags': list_of_tag_names},
+            '/projects/%(project_id)s/tags' % {'project_id': project['id']},
+            body={'tags': tags},
             expected_status=http_client.BAD_REQUEST)
 
 

@@ -20,10 +20,6 @@ from keystone.resource.backends import base
 
 LOG = log.getLogger(__name__)
 
-# TODO(aselius): Add project tag information under resources.
-# TODO(aselius): Add tag id and stuff on Project class
-# TODO(aselius): SQL Crud for various project tag related fns.
-
 
 class Resource(base.ResourceDriverBase):
 
@@ -38,19 +34,8 @@ class Resource(base.ResourceDriverBase):
         else:
             return ref
 
-    def _encode_project_id(self, ref):
-        if 'project_id' in ref and ref['project_id'] is None:
-            new_ref = ref.copy()
-            new_ref['project_id'] = base.NULL_PROJECT_ID
-            return new_ref
-        else:
-            return ref
-
     def _is_hidden_ref(self, ref):
-        if 'domain_id' in ref:
-            return ref.id == base.NULL_DOMAIN_ID
-        if 'project_id' in ref:
-            return ref.id == base.NULL_PROJECT_ID
+        return ref.id == base.NULL_DOMAIN_ID
 
     def _get_project(self, session, project_id):
         project_ref = session.query(Project).get(project_id)
@@ -313,7 +298,7 @@ class Resource(base.ResourceDriverBase):
                 if (project_id not in project_ids_from_bd or
                         project_id == base.NULL_DOMAIN_ID):
                     LOG.warning('Project %s does not exist and was not '
-                                'deleted.' % project_id)
+                                'deleted.', project_id)
             query.delete(synchronize_session=False)
 
     def get_project_tag(self, project_id, tag_name):
@@ -416,10 +401,9 @@ class ProjectTag(sql.ModelBase, sql.ModelDictMixin):
         return d
 
     __tablename__ = 'project_tag'
-    attributes = ['id', 'project_id', 'name']
-    id = sql.Column(sql.Integer(), primary_key=True)
+    attributes = ['project_id', 'name']
     project_id = sql.Column(
         sql.String(64), sql.ForeignKey('project.id', ondelete='CASCADE'),
-        nullable=False)
-    name = sql.Column(sql.Unicode(60), nullable=False)
+        nullable=False, primary_key=True)
+    name = sql.Column(sql.Unicode(60), nullable=False, primary_key=True)
     __table_args__ = (sql.UniqueConstraint('project_id', 'name'),)

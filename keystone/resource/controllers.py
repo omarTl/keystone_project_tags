@@ -239,8 +239,6 @@ class DomainConfigV3(controller.V3Controller):
         ref = self.domain_config_api.get_config_default(group, option)
         return {self.member_name: ref}
 
-# TODO(aselius): Use the resource_api in core.py as wrapper for the function
-
 
 @dependency.requires('resource_api')
 class ProjectV3(controller.V3Controller):
@@ -281,6 +279,8 @@ class ProjectV3(controller.V3Controller):
         # False (which in query terms means '0')
         if 'is_domain' not in request.params:
             hints.add_filter('is_domain', '0')
+        # If filter with tags parameters below are passed in when listing
+        # projects, proceed with querying projects with project names
         tag_params = ['tags', 'tags-any', 'not-tags', 'not-tags-any']
         is_in = lambda a, b: any(i in b for i in a)
         if is_in(request.params.keys(), tag_params):
@@ -296,6 +296,8 @@ class ProjectV3(controller.V3Controller):
                                          refs, hints=hints)
 
     def _expand_project_list(self, request):
+        # If one of the filter with tags parameters are found, point to
+        # respective logic to proceed with querying
         params = request.params
         tag_map = {
             'tags': 'list_projects_with_tags',
@@ -315,6 +317,7 @@ class ProjectV3(controller.V3Controller):
     def _expand_project_ref(self, request, ref):
         params = request.params
         context = request.context_dict
+
         parents_as_list = 'parents_as_list' in params and (
             self.query_filter_is_true(params['parents_as_list']))
         parents_as_ids = 'parents_as_ids' in params and (
@@ -380,7 +383,6 @@ class ProjectV3(controller.V3Controller):
 
 @dependency.requires('resource_api')
 class ProjectTagV3(controller.V3Controller):
-    # TODO(aselius): Add notifications for created, updated, deleted.
     collection_name = 'tags'
     member_name = 'tag'
 
@@ -398,11 +400,8 @@ class ProjectTagV3(controller.V3Controller):
             url = r['host_url'] + r['environment']['REQUEST_URI']
         except Exception:
             url = r['path']
-        resp = {}
-        resp['links'] = {"next": None,
-                         "previous": None,
-                         "self": url}
-        return resp
+        headers = [('location', url)]
+        return wsgi.render_response(headers=headers)
 
     @controller.protected()
     def get_project_tag(self, request, project_id, value):
@@ -414,11 +413,10 @@ class ProjectTagV3(controller.V3Controller):
             project_id=project_id,
             project_tag_name=value)
 
-    # TODO(aselius): Add hints to provide more info about limits etc.
     @controller.protected()
     def list_project_tags(self, request, project_id):
         resp = self.resource_api.list_project_tags(project_id)
-        if len(resp['tags']) == 0:
+        if not resp['tags']:
             raise exception.ProjectTagsNotFound(project_id=project_id)
         return resp
 
@@ -430,6 +428,5 @@ class ProjectTagV3(controller.V3Controller):
 
     @controller.protected()
     def remove_all_project_tags(self, request, project_id):
-        # initiator=request.audit_initiator removed
         return self.resource_api.remove_all_project_tags(
             project_id)
