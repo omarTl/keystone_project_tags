@@ -1806,14 +1806,27 @@ class ResourceDriverTests(object):
         }
         self.driver.create_project_tag(project_tag)
 
-    def test_create_project_tags_same_name_conflict(self):
+    def test_create_project_tags_same_id_no_conflict(self):
         project = self._create_project()
+        tag_name = six.text_type(uuid.uuid4().hex)
         project_tag = {
-            'name': six.text_type('some_valid_name'),
+            'name': tag_name,
             'project_id': project['id']
         }
-        self.driver.create_project_tag(project_tag)
-        # Assign unique ID to other tag to avoid ID conflict
-        self.assertRaises(exception.Conflict,
-                          self.driver.create_project_tag,
-                          project_tag)
+        ref1 = self.driver.create_project_tag(project_tag)
+        project_tag = {
+            'name': tag_name,
+            'project_id': project['id']
+        }
+        ref2 = self.driver.create_project_tag(project_tag)
+        self.assertEqual(ref1, ref2)
+
+    def test_create_project_tags_same_name_no_conflict(self):
+        project = self._create_project()
+        tag_name = six.text_type('some_valid_name')
+        project_tag = {
+            'name': tag_name,
+            'project_id': project['id']
+        }
+        r = self.driver.create_project_tag(project_tag)
+        self.assertEqual(tag_name, r['name'])

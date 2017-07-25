@@ -327,7 +327,7 @@ class Resource(base.ResourceDriverBase):
     def create_project_tag(self, project_tag):
         with sql.session_for_write() as session:
             project_tag_ref = ProjectTag.from_dict(project_tag)
-            session.add(project_tag_ref)
+            session.merge(project_tag_ref)
             return project_tag_ref.to_dict()
 
     def list_project_tags(self, project_id):
