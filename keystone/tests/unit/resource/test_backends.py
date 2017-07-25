@@ -1802,61 +1802,18 @@ class ResourceDriverTests(object):
         project = self._create_project()
         project_tag = {
             'name': six.text_type(uuid.uuid4().hex),
-            'id': 1,
             'project_id': project['id'],
         }
         self.driver.create_project_tag(project_tag)
-
-    def test_create_project_tag_null_tag_name(self):
-        project = self._create_project()
-        project_tag = {
-            'name': None,
-            'id': 1,
-            'project_id': project['id']
-        }
-        self.assertRaises(exception.UnexpectedError,
-                          self.driver.create_project_tag,
-                          project_tag)
-
-    def test_create_project_tag_null_project_id(self):
-        self._create_project()
-        project_tag = {
-            'name': six.text_type(uuid.uuid4().hex),
-            'id': 1,
-            'project_id': None
-        }
-        self.assertRaises(exception.UnexpectedError,
-                          self.driver.create_project_tag,
-                          project_tag)
-
-    def test_create_project_tags_same_id_conflict(self):
-        project = self._create_project()
-        project_tag = {
-            'name': six.text_type(uuid.uuid4().hex),
-            'id': 1,
-            'project_id': project['id']
-        }
-        self.driver.create_project_tag(project_tag)
-
-        project_tag = {
-            'name': six.text_type(uuid.uuid4().hex),
-            'id': 1,
-            'project_id': project['id']
-        }
-        self.assertRaises(exception.Conflict,
-                          self.driver.create_project_tag,
-                          project_tag)
 
     def test_create_project_tags_same_name_conflict(self):
         project = self._create_project()
         project_tag = {
             'name': six.text_type('some_valid_name'),
-            'id': 1,
             'project_id': project['id']
         }
         self.driver.create_project_tag(project_tag)
         # Assign unique ID to other tag to avoid ID conflict
-        project_tag['id'] = 2
         self.assertRaises(exception.Conflict,
                           self.driver.create_project_tag,
                           project_tag)
