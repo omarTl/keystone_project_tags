@@ -15,27 +15,27 @@ import sqlalchemy as sql
 
 def upgrade(migrate_engine):
 
-    # Upgrade operations go here. Don't create your own engine; bind
-    # migrate_engine to your metadata
     meta = sql.MetaData()
     meta.bind = migrate_engine
 
     project_table = sql.Table('project', meta, autoload=True)
+
+    # NOTE(lamt) To allow tag name to be case sensitive for MySQL, the 'name'x
+    # column needs to use collation, which is incompatible with Postgresql.
+    # Using unicode to mirror nova's server tag:
+    # https://github.com/openstack/nova/blob/master/nova/db/sqlalchemy/models.py
     project_tags_table = sql.Table(
         'project_tag',
         meta,
-        sql.Column('id',
-                   sql.Integer,
-                   primary_key=True,
-                   autoincrement=True),
         sql.Column('project_id',
                    sql.String(64),
                    sql.ForeignKey(project_table.c.id, ondelete='CASCADE'),
-                   nullable=False),
+                   nullable=False,
+                   primary_key=True),
         sql.Column('name',
                    sql.Unicode(60),
-                   nullable=False),
-        sql.UniqueConstraint('project_id', 'name'),
+                   nullable=False,
+                   primary_key=True),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )

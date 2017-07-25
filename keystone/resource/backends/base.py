@@ -37,7 +37,6 @@ def get_project_from_domain(domain_ref):
 # None. See comment in Project class of resource/backends/sql.py for more
 # details.
 NULL_DOMAIN_ID = '<<keystone.domain.root>>'
-NULL_PROJECT_ID = '<<keystone.project.root>>'
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -289,7 +288,6 @@ class ResourceDriverBase(object):
     def create_project_tag(self, project_tag):
         """Create the specified tag and adds it to the list in the project.
 
-        :param project_tag_id:
         :param dict project_tag: The new project tag
 
         Project tags schema::

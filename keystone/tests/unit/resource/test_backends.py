@@ -14,6 +14,7 @@ import copy
 import uuid
 
 import mock
+import six
 from six.moves import range
 from testtools import matchers
 
@@ -31,12 +32,6 @@ CONF = keystone.conf.CONF
 class ResourceTests(object):
 
     domain_count = len(default_fixtures.DOMAINS)
-
-    def _get_random_list_of_tag_refs(self, num_tags):
-        tag_name_list = []
-        for x in range(0, num_tags):
-            tag_name_list.append('just some name' + str(x))
-        return tag_name_list
 
     def test_get_project(self):
         tenant_ref = self.resource_api.get_project(self.tenant_bar['id'])
@@ -1559,9 +1554,22 @@ class ResourceTests(object):
 
         tags = []
         for _ in range(0, tag_size):
-            tags.append(unicode(uuid.uuid4().hex))
+            tags.append(six.text_type(uuid.uuid4().hex))
 
         return project, tags
+
+    def test_create_project_with_tags(self):
+        check_tag = six.text_type('test')
+        tags = [check_tag, six.text_type(uuid.uuid4().hex)]
+        project = unit.new_project_ref(
+            domain_id=CONF.identity.default_domain_id,
+            tags=tags)
+        project = self.resource_api.create_project(project['id'], project)
+
+        project_refs = self.resource_api.list_projects_with_tags_any(check_tag)
+        tag_refs = self.resource_api.get_project_tag(project['id'], check_tag)
+        self.assertIn(check_tag, tag_refs['name'])
+        self.assertIn(project, project_refs)
 
     def test_list_projects_with_tags(self):
         project, tags = self._create_project_and_tags(2)
@@ -1599,7 +1607,7 @@ class ResourceTests(object):
 
     def test_get_project_contains_tags(self):
         project, _ = self._create_project_and_tags(1)
-        tag = unicode('foo')
+        tag = six.text_type('foo')
         self.resource_api.create_project_tag(project['id'], tag)
         project_refs = self.resource_api.list_projects_with_tags(tag)
         tag_refs = self.resource_api.get_project_tag(project['id'], tag)
@@ -1629,7 +1637,7 @@ class ResourceTests(object):
     def test_create_project_tag_with_trailing_whitespace(self):
         # PUT /v3/projects/{project_id}/tags/{tag}
         project, _ = self._create_project_and_tags(1)
-        tag = unicode(uuid.uuid4().hex + '   ')
+        tag = six.text_type(uuid.uuid4().hex + '   ')
         resp = self.resource_api.create_project_tag(project['id'], tag)
         self.assertEqual(project['id'], resp['project_id'])
         self.assertEqual(tag.strip(), resp['name'])
@@ -1639,15 +1647,15 @@ class ResourceTests(object):
         for tag in tags:
             self.resource_api.create_project_tag(project['id'], tag)
 
-        last_tag = unicode('tag51')
+        last_tag = six.text_type('tag51')
         self.assertRaises(exception.ValidationError,
                           self.resource_api.create_project_tag,
                           project['id'], last_tag)
 
     def test_create_project_tag_case_creates_different_tags(self):
         project, tags = self._create_project_and_tags(1)
-        tag_lower = unicode('aaa')
-        tag_upper = unicode('AAA')
+        tag_lower = six.text_type('aaa')
+        tag_upper = six.text_type('AAA')
 
         self.resource_api.create_project_tag(project['id'], tag_lower)
         self.resource_api.create_project_tag(project['id'], tag_upper)
@@ -1663,7 +1671,7 @@ class ResourceTests(object):
         self.assertEqual(len(project_tag_ref['tags']), 2)
 
         # Update project to only have one tag
-        tags = [unicode('one')]
+        tags = [six.text_type('one')]
         self.resource_api.update_project_tags(project['id'], tags)
         project_tag_ref = self.resource_api.list_project_tags(
             project['id'])
@@ -1690,7 +1698,7 @@ class ResourceTests(object):
         self.assertRaises(exception.ProjectTagNotFound,
                           self.resource_api.delete_project_tag,
                           uuid.uuid4().hex,
-                          unicode(uuid.uuid4().hex))
+                          six.text_type(uuid.uuid4().hex))
 
     def test_remove_all_project_tags(self):
         project, tags = self._create_project_and_tags(5)
@@ -1793,7 +1801,7 @@ class ResourceDriverTests(object):
     def test_create_project_tag(self):
         project = self._create_project()
         project_tag = {
-            'name': unicode(uuid.uuid4().hex),
+            'name': six.text_type(uuid.uuid4().hex),
             'id': 1,
             'project_id': project['id'],
         }
@@ -1813,7 +1821,7 @@ class ResourceDriverTests(object):
     def test_create_project_tag_null_project_id(self):
         self._create_project()
         project_tag = {
-            'name': unicode(uuid.uuid4().hex),
+            'name': six.text_type(uuid.uuid4().hex),
             'id': 1,
             'project_id': None
         }
@@ -1824,14 +1832,14 @@ class ResourceDriverTests(object):
     def test_create_project_tags_same_id_conflict(self):
         project = self._create_project()
         project_tag = {
-            'name': unicode(uuid.uuid4().hex),
+            'name': six.text_type(uuid.uuid4().hex),
             'id': 1,
             'project_id': project['id']
         }
         self.driver.create_project_tag(project_tag)
 
         project_tag = {
-            'name': unicode(uuid.uuid4().hex),
+            'name': six.text_type(uuid.uuid4().hex),
             'id': 1,
             'project_id': project['id']
         }
@@ -1842,7 +1850,7 @@ class ResourceDriverTests(object):
     def test_create_project_tags_same_name_conflict(self):
         project = self._create_project()
         project_tag = {
-            'name': unicode('some_valid_name'),
+            'name': six.text_type('some_valid_name'),
             'id': 1,
             'project_id': project['id']
         }

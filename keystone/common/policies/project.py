@@ -23,7 +23,7 @@ project_policies = [
                      'method': 'GET'}]),
     policy.DocumentedRuleDefault(
         name=base.IDENTITY % 'list_projects',
-        check_str=base.RULE_ADMIN_REQUIRED,
+        check_str=base.RULE_PROJECT_ADMIN_REQUIRED,
         description='List projects.',
         operations=[{'path': '/v3/projects',
                      'method': 'GET'}]),
@@ -35,19 +35,19 @@ project_policies = [
                      'method': 'GET'}]),
     policy.DocumentedRuleDefault(
         name=base.IDENTITY % 'create_project',
-        check_str=base.RULE_ADMIN_REQUIRED,
+        check_str=base.RULE_PROJECT_ADMIN_REQUIRED,
         description='Create project.',
         operations=[{'path': '/v3/projects',
                      'method': 'POST'}]),
     policy.DocumentedRuleDefault(
         name=base.IDENTITY % 'update_project',
-        check_str=base.RULE_ADMIN_REQUIRED,
+        check_str=base.RULE_PROJECT_ADMIN_REQUIRED,
         description='Update project.',
         operations=[{'path': '/v3/projects/{project_id}',
                      'method': 'PATCH'}]),
     policy.DocumentedRuleDefault(
         name=base.IDENTITY % 'delete_project',
-        check_str=base.RULE_ADMIN_REQUIRED,
+        check_str=base.RULE_PROJECT_ADMIN_REQUIRED,
         description='Delete project.',
         operations=[{'path': '/v3/projects/{project_id}',
                      'method': 'DELETE'}])

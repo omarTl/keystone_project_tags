@@ -31,6 +31,7 @@ from keystone.common.policies import policy
 from keystone.common.policies import policy_association
 from keystone.common.policies import project
 from keystone.common.policies import project_endpoint
+from keystone.common.policies import project_tags
 from keystone.common.policies import protocol
 from keystone.common.policies import region
 from keystone.common.policies import revoke_event
@@ -65,6 +66,7 @@ def list_rules():
         policy_association.list_rules(),
         project.list_rules(),
         project_endpoint.list_rules(),
+        project_tags.list_rules(),
         protocol.list_rules(),
         region.list_rules(),
         revoke_event.list_rules(),
