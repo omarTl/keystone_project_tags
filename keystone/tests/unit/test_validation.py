@@ -527,18 +527,10 @@ class ProjectTagsValidationTestCase(unit.BaseTestCase):
         tags = ['tag%d' % i for i in range(_MAX_PROJECT_TAG_COUNT)]
         self.update_project_tags_validator.validate(tags)
 
-<<<<<<< b214b4e74ca0363eabbe29ddac7d88cdffbab983
-    def test_validate_update_project_tags_too_many_values(self):
-        # Should fail for too many tags in list
-        tags = ['tag%d' % i for i in range(_MAX_PROJECT_TAG_COUNT + 1)]
-        self.assertRaises(exception.SchemaValidationError,
-                          self.update_project_tags_validator.validate,
-=======
         # Should fail for higher than max value, which is 50
         tags.append('tag51')
         self.assertRaises(exception.SchemaValidationError,
                           self.create_project_tags_validator.validate,
->>>>>>> Add JSON schema validation for project tags
                           tags)
 
 

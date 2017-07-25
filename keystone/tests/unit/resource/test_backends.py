@@ -1821,7 +1821,7 @@ class ResourceDriverTests(object):
         ref2 = self.driver.create_project_tag(project_tag)
         self.assertEqual(ref1, ref2)
 
-    def test_create_project_tags_same_name_conflict(self):
+    def test_create_project_tags_same_name_no_conflict(self):
         project = self._create_project()
         tag_name = six.text_type('some_valid_name')
         project_tag = {
@@ -1829,6 +1829,4 @@ class ResourceDriverTests(object):
             'project_id': project['id']
         }
         r = self.driver.create_project_tag(project_tag)
-        # Assign unique ID to other tag to avoid ID conflict
-        project_tag['id'] = 2
         self.assertEqual(tag_name, r['name'])
