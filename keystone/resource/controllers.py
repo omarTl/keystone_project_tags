@@ -317,11 +317,11 @@ class ProjectV3(controller.V3Controller):
                             return True
                         else:
                             return False
-                    elif key == 'tags_any':
+                    elif key == 'tags_any' or key == 'tags-any':
                         return any(
                             getattr(tag, comparator)(
                                 filter_value) for tag in target_value)
-                    elif key == 'not_tags':
+                    elif key == 'not_tags' or key == 'not-tags':
                         if target_value == []:
                             return True
                         elif all(
@@ -330,7 +330,7 @@ class ProjectV3(controller.V3Controller):
                             return False
                         else:
                             return True
-                    elif key == 'not_tags_any':
+                    elif key == 'not_tags_any' or key == 'not-tags-any':
                         return not any(
                             getattr(tag, comparator)(
                                 filter_value) for tag in target_value)
@@ -343,10 +343,10 @@ class ProjectV3(controller.V3Controller):
                             return True
                         else:
                             return False
-                    elif key == 'tags_any':
+                    elif key == 'tags_any' or key == 'tags-any':
                         return any((
                             filter_value in tag) for tag in target_value)
-                    elif key == 'not_tags':
+                    elif key == 'not_tags' or key == 'not-tags':
                         if target_value == []:
                             return True
                         elif all((filter_value in tag)
@@ -354,7 +354,7 @@ class ProjectV3(controller.V3Controller):
                             return False
                         else:
                             return True
-                    elif key == 'not_tags_any':
+                    elif key == 'not_tags_any' or key == 'not-tags-any':
                         return not any((
                             filter_value in tag) for tag in target_value)
                 else:
@@ -423,7 +423,6 @@ class ProjectV3(controller.V3Controller):
         # projects, proceed with querying projects with project names
         tag_params = ['tags', 'tags-any', 'not-tags', 'not-tags-any']
         is_in = lambda a, b: any(i in b for i in a)
-        import rpdb; rpdb.set_trace()
         if is_in(request.params.keys(), tag_params):
             refs = self._project_list_tag_filter(request)
         else:
