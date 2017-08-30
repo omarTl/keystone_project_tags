@@ -21,6 +21,7 @@ from six.moves import http_client
 
 from keystone.common import controller
 from keystone.common import dependency
+from keystone.common import utils
 from keystone.common import validation
 from keystone.common import wsgi
 import keystone.conf
@@ -249,6 +250,143 @@ class ProjectV3(controller.V3Controller):
         super(ProjectV3, self).__init__()
         self.get_member_from_driver = self.resource_api.get_project
 
+    @classmethod
+    def filter_by_attributes(cls, refs, hints):
+        """Filter a list of references by filter values."""
+        def _attr_match(ref_attr, val_attr):
+            """Matche attributes allowing for booleans as strings.
+
+            We test explicitly for a value that defines it as 'False',
+            which also means that the existence of the attribute with
+            no value implies 'True'
+
+            """
+            if type(ref_attr) is bool:
+                return ref_attr == utils.attr_as_boolean(val_attr)
+            else:
+                return ref_attr == val_attr
+
+        def _attr_partial_match(ref_attr, val_attr):
+            """
+            """
+            return  val_attr in ref_attr or ref_attr == val_attr
+
+        def _inexact_attr_match(filter, ref):
+            """Apply an inexact filter to a result dict.
+
+            :param filter: the filter in question
+            :param ref: the dict to check
+
+            :returns: True if there is a match
+
+            """
+            comparator = filter['comparator']
+            key = filter['name']
+            if key in ref and 'tag' not in key:
+                filter_value = filter['value']
+                target_value = ref[key]
+                if not filter['case_sensitive']:
+                    # We only support inexact filters on strings so
+                    # it's OK to use lower()
+                    filter_value = filter_value.lower()
+                    target_value = target_value.lower()
+
+                if comparator == 'contains':
+                    return (filter_value in target_value)
+                elif comparator == 'startswith':
+                    return target_value.startswith(filter_value)
+                elif comparator == 'endswith':
+                    return target_value.endswith(filter_value)
+                else:
+                    # We silently ignore unsupported filters
+                    return True
+
+            # This is for when you pass in tags and comparators.
+            # Tags cannot use the current comparator logic in v3controller
+            if 'tag' in key:
+                filter_value = filter['value']
+                target_value = ref['tags']
+
+                if comparator == 'startswith' or comparator == 'endswith':
+                    if key == 'tags':
+                        if target_value == []:
+                            return False
+                        elif all(
+                            getattr(tag, comparator)(
+                                filter_value) for tag in target_value):
+                            return True
+                        else:
+                            return False
+                    elif key == 'tags_any':
+                        return any(
+                            getattr(tag, comparator)(
+                                filter_value) for tag in target_value)
+                    elif key == 'not_tags':
+                        if target_value == []:
+                            return True
+                        elif all(
+                            getattr(tag, comparator)(
+                                filter_value) for tag in target_value):
+                            return False
+                        else:
+                            return True
+                    elif key == 'not_tags_any':
+                        return not any(
+                            getattr(tag, comparator)(
+                                filter_value) for tag in target_value)
+                elif comparator == 'contains':
+                    if key == 'tags':
+                        if target_value == []:
+                            return False
+                        elif all((filter_value in tag)
+                                 for tag in target_value):
+                            return True
+                        else:
+                            return False
+                    elif key == 'tags_any':
+                        return any((
+                            filter_value in tag) for tag in target_value)
+                    elif key == 'not_tags':
+                        if target_value == []:
+                            return True
+                        elif all((filter_value in tag)
+                                 for tag in target_value):
+                            return False
+                        else:
+                            return True
+                    elif key == 'not_tags_any':
+                        return not any((
+                            filter_value in tag) for tag in target_value)
+                else:
+                    return True
+
+            return False
+        for filter in hints.filters:
+            if filter['comparator'] == 'equals':
+                attr = filter['name']
+                value = filter['value']
+                if attr == 'tags':
+                    refs = [r for r in refs if _attr_match(
+                        utils.flatten_dict(r).get('tags'), sorted(value.split(',')))]
+                elif attr == 'tags-any':
+                    refs = [r for r in refs if _attr_partial_match(
+                        utils.flatten_dict(r).get('tags'), sorted(value.split(',')))]
+                elif attr == 'not-tags':
+                    refs = [r for r in refs if not _attr_match(
+                        utils.flatten_dict(r).get('tags'), sorted(value.split(',')))]
+                elif attr == 'not-tags-any':
+                    refs = [r for r in refs if not _attr_partial_match(
+                        utils.flatten_dict(r).get('tags'), sorted(value.split(',')))]
+                else:
+                    refs = [r for r in refs if _attr_match(
+                        utils.flatten_dict(r).get(attr), value)]
+            else:
+                # It might be an inexact filter
+                refs = [r for r in refs if _inexact_attr_match(
+                    filter, r)]
+
+        return refs
+
     @controller.protected()
     def create_project(self, request, project):
         validation.lazy_validate(schema.project_create, project)
@@ -272,7 +410,9 @@ class ProjectV3(controller.V3Controller):
         return ProjectV3.wrap_member(request.context_dict, ref)
 
     @controller.filterprotected('domain_id', 'enabled', 'name',
-                                'parent_id', 'is_domain')
+                                'parent_id', 'is_domain', 'tags',
+                                'tags_any', 'not_tags', 'not_tags_any',
+                                'tags-any', 'not-tags', 'not-tags-any')
     def list_projects(self, request, filters):
         hints = ProjectV3.build_driver_hints(request, filters)
         # If 'is_domain' has not been included as a query, we default it to
@@ -283,6 +423,7 @@ class ProjectV3(controller.V3Controller):
         # projects, proceed with querying projects with project names
         tag_params = ['tags', 'tags-any', 'not-tags', 'not-tags-any']
         is_in = lambda a, b: any(i in b for i in a)
+        import rpdb; rpdb.set_trace()
         if is_in(request.params.keys(), tag_params):
             refs = self._project_list_tag_filter(request)
         else:
