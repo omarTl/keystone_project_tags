@@ -249,7 +249,7 @@ class ProjectV3(controller.V3Controller):
     def __init__(self):
         super(ProjectV3, self).__init__()
         self.get_member_from_driver = self.resource_api.get_project
-
+ 
     @classmethod
     def filter_by_attributes(cls, refs, hints):
         """Filter a list of references by filter values."""
@@ -271,6 +271,18 @@ class ProjectV3(controller.V3Controller):
             """
             return  val_attr in ref_attr or ref_attr == val_attr
 
+        def _tags_any(matches, target_value):
+            return any(matches)
+
+        def _not_tags(matches, target_value):
+            return not _tags(matches, target_value)
+
+        def _not_tags_any(matches, target_value):
+            return True if not target_value else not any(matches)
+
+        def _tags(matches, target_value):
+            return False if not target_value else all(matches)
+
         def _inexact_attr_match(filter, ref):
             """Apply an inexact filter to a result dict.
 
@@ -281,9 +293,10 @@ class ProjectV3(controller.V3Controller):
 
             """
             comparator = filter['comparator']
-            key = filter['name']
+            filter_value = filter['value']
+            key = filter['name'].replace("_", "-")
+            
             if key in ref and 'tag' not in key:
-                filter_value = filter['value']
                 target_value = ref[key]
                 if not filter['case_sensitive']:
                     # We only support inexact filters on strings so
@@ -300,67 +313,34 @@ class ProjectV3(controller.V3Controller):
                 else:
                     # We silently ignore unsupported filters
                     return True
-
-            # This is for when you pass in tags and comparators.
-            # Tags cannot use the current comparator logic in v3controller
-            if 'tag' in key:
-                filter_value = filter['value']
+            
+            # NOTE(otleimat): Function pointers to helper functions
+            # simplify tag filtering greatly because this is
+            # essentially a large switch statement
+            inexact_checker = {'tags-any': _tags_any, 'not-tags': _not_tags,
+                               'not-tags-any': _not_tags_any, 'tags': _tags}
+            # Only do a tag filter search if the request matches any of the
+            # supported searches
+            if key in inexact_checker.keys():
                 target_value = ref['tags']
-
                 if comparator == 'startswith' or comparator == 'endswith':
-                    if key == 'tags':
-                        if target_value == []:
-                            return False
-                        elif all(
-                            getattr(tag, comparator)(
-                                filter_value) for tag in target_value):
-                            return True
-                        else:
-                            return False
-                    elif key == 'tags_any' or key == 'tags-any':
-                        return any(
-                            getattr(tag, comparator)(
-                                filter_value) for tag in target_value)
-                    elif key == 'not_tags' or key == 'not-tags':
-                        if target_value == []:
-                            return True
-                        elif all(
-                            getattr(tag, comparator)(
-                                filter_value) for tag in target_value):
-                            return False
-                        else:
-                            return True
-                    elif key == 'not_tags_any' or key == 'not-tags-any':
-                        return not any(
-                            getattr(tag, comparator)(
-                                filter_value) for tag in target_value)
+                    # If a 'startswith' or 'endswith' request is made, search
+                    # any edge matches in the target_value and record an array
+                    # of true/false values
+                    edge_matches = [getattr(tag, comparator)(
+                        filter_value) for tag in target_value]
+                    # This is will route the matched occurences to whichever
+                    # helper function needs to be hit
+                    return inexact_checker[key](edge_matches, target_value)
                 elif comparator == 'contains':
-                    if key == 'tags':
-                        if target_value == []:
-                            return False
-                        elif all((filter_value in tag)
-                                 for tag in target_value):
-                            return True
-                        else:
-                            return False
-                    elif key == 'tags_any' or key == 'tags-any':
-                        return any((
-                            filter_value in tag) for tag in target_value)
-                    elif key == 'not_tags' or key == 'not-tags':
-                        if target_value == []:
-                            return True
-                        elif all((filter_value in tag)
-                                 for tag in target_value):
-                            return False
-                        else:
-                            return True
-                    elif key == 'not_tags_any' or key == 'not-tags-any':
-                        return not any((
-                            filter_value in tag) for tag in target_value)
+                    # a 'contains' search requires a different target array
+                    contains_matches = [(filter_value in tag)
+                                        for tag in target_value]
+                    return inexact_checker[key](contains_matches, target_value)
                 else:
                     return True
-
             return False
+           
         for filter in hints.filters:
             if filter['comparator'] == 'equals':
                 attr = filter['name']
